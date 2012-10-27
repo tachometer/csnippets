@@ -7,7 +7,6 @@ typedef bool (*hash_compare) (const void *v1, const void *v2);
 struct pair {
     char *key;
     void *value;
-    unsigned int ref;
 };
 
 struct bucket {

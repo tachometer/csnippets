@@ -6,10 +6,27 @@
 #include <stdio.h>
 #include <errno.h>
 
-#define ref(pair) (pair)->ref++
-#define deref(pair) (pair)->ref--;
-#define hasref(pair) !!(pair)->ref
-static struct pair *get_pair(const struct map *map, const char *key);
+static struct pair *get_pair(const struct map *map, const char *key)
+{
+    unsigned int i, n, index;
+    struct pair *pair;
+    struct bucket *bucket;
+
+    index = map->hash_function(key) % map->count;
+    bucket = &map->buckets[index];
+    if (unlikely(!bucket))
+        return 0;
+
+    n = bucket->count;
+    if (!n)
+        return NULL;
+
+    pair = bucket->pairs;
+    for (i = 0; i < n; i++, pair++)
+        if (map->hash_comp(pair->key, key))
+            return pair;
+    return NULL;
+}
 
 static unsigned long hash(const char *str)
 {
@@ -28,14 +45,11 @@ static bool hash_cmp(const char *v1, const char *v2)
 
 void map_init(struct map* map)
 {
-    map->buckets = malloc(map->count * sizeof(struct bucket));
+    xmalloc(map->buckets, map->count * sizeof(struct bucket), return);
     if (!map->hash_function)
         map->hash_function = (hash_function) hash;
     if (!map->hash_comp)
         map->hash_comp = (hash_compare) hash_cmp;
-
-    if (unlikely(!map->buckets))
-        fatal("fatal: failed to allocate buckets of count %u for map buckets!\n", map->count);
 
     memset(map->buckets, 0, map->count * sizeof(struct bucket));
 }
@@ -88,7 +102,6 @@ bool map_remove(const struct map *map, const char *key)
         return false;
 
     xfree(pair->key);
-    deref(pair);
     return true; 
 }
 
@@ -126,7 +139,6 @@ struct pair *map_put(const struct map *map, const char *key, void* value)
     pair = &bucket->pairs[bucket->count - 1];
     pair->key = new_key;
     pair->value = value;
-    ref(pair);
 
     strcpy(pair->key, key);
     return pair;
@@ -159,31 +171,9 @@ int map_get_count(const struct map *map)
         m = bucket->count;
 
         for (j = 0; j < m; j++, pair++)
-            if (hasref(pair))
+            if (pair->key)
                 count++;
     }
     return count;
-}
-
-static struct pair *get_pair(const struct map *map, const char *key)
-{
-    unsigned int i, n, index;
-    struct pair *pair;
-    struct bucket *bucket;
-
-    index = map->hash_function(key) % map->count;
-    bucket = &map->buckets[index];
-    if (unlikely(!bucket))
-        return 0;
-
-    n = bucket->count;
-    if (!n)
-        return NULL;
-
-    pair = bucket->pairs;
-    for (i = 0; i < n; i++, pair++)
-        if (hasref(pair) && map->hash_comp(pair->key, key))
-            return pair;
-    return NULL;
 }
 
