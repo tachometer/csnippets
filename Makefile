@@ -8,11 +8,11 @@ ifdef rwtest
 TEST  = rwlock_test.c
 LIBS += -lpthread
 else
-TEST  = tests.c
+TEST = tests.c
 endif
 
 BIN_DIR = bin
-BIN     = ${BIN_DIR}/a
+BIN     = a
 
 SRC_DIR = src
 SRC     = socket.c strmisc.c map.c error.c config.c rwlock.c asprintf.c ${TEST}
@@ -25,16 +25,20 @@ define compile
 	@$(CC) -c $(CFLAGS) $1 -o $@ $<
 endef
 
-all: $(BIN)
+define link
+	@echo " LD  $@"
+	@$(CC) $(LIBS) $(CFLAGS) -o $@ $(OBJ)
+endef
+
+all: ${BIN_DIR}/$(BIN)
 clean:
 	$(RM) ${OBJ_DIR}/*.o ${OBJ_DIR}/*.gch $(BIN)
 
 ${OBJ_DIR}/pre.h.gch: ${SRC_DIR}/${PRE}
 	${compile}
 
-${BIN}: ${BIN_DIR} ${OBJ_DIR} ${OBJ}
-	@echo " LD  $@"
-	@$(CC) $(LIBS) $(CFLAGS) -o $@ $(OBJ)
+${BIN_DIR}/${BIN}: ${BIN_DIR} ${OBJ_DIR} ${OBJ}
+	${link}
 
 ${OBJ_DIR}/%.o: ${SRC_DIR}/%.c ${OBJ_DIR}/${PRE}.gch
 	${call compile, -include $(PRE)}
