@@ -8,7 +8,6 @@
 
 #include <stdarg.h>
 
-extern char *__printf(1, 2) afmt(const char *fmt, ...);
 extern int __printf(2, 3) asprintf(char **strp, const char *fmt, ...);
 extern int vasprintf(char **strp, const char *fmt, va_list va);
 

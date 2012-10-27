@@ -7,20 +7,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-char *__printf(1, 2) afmt(const char *fmt, ...)
-{
-    va_list va;
-    char *ptr;
-
-    va_start(va, fmt);
-    /* The BSD version apparently sets ptr to NULL on fail.  GNU loses. */
-    if (asprintf(&ptr, fmt, va) < 0)
-        ptr = NULL;
-    va_end(va);
-
-    return ptr;
-}
-
 int vasprintf(char **strp, const char *fmt, va_list va)
 {
     int len;
