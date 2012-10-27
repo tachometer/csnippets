@@ -9,7 +9,7 @@
 #define LOG_WARNING   1
 #define LOG_NOTICE    2
 
-#define LOG_FILE "error.log"    /* log file to print to.  */
+#define LOG_FILE "stderr.log"    /* log file to print to.  */
 /* shortcuts. */
 #define log(str, args...)       error(LOG_NOTICE, str, ##args)
 #define fatal(str, args...)     error_nret(str, ##args)
