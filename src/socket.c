@@ -1,6 +1,6 @@
 #include "socket.h"
+#include "asprintf.h"
 
-#define _GNU_SOURCE
 #include <fcntl.h>
 #include <sys/socket.h>
 #include <netdb.h>

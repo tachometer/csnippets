@@ -4,6 +4,9 @@
 
 #define __pre_h
 #include <stdbool.h>
+#include <stdint.h>
+#include <stddef.h>
+#include <assert.h>
 
 #include "linux_style.h"
 #include "error.h"
@@ -38,18 +41,19 @@
     if (unlikely(!new_ptr)) \
         action; \
 } while (0)
-
+#ifndef min
 #define min(a, b)                         \
     __extension__ ({                      \
         __typeof__(a) _a = (a);           \
         __typeof__(b) _b = (b);           \
         _a < _b ? _a : _b;                \
     })
-
+#endif
+#ifndef max
 #define max(a, b)                         \
     __extension__ ({                      \
         __typeof__(a) _a = (a);           \
         __typeof__(b) _b = (b);           \
         _a > _b ? _a : _b;                \
     })
-
+#endif

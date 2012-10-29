@@ -5,7 +5,7 @@
 #define __noreturn      __attribute((noreturn))
 #define likely(x)       __builtin_expect(!!(x), 1)
 #define unlikely(x)     __builtin_expect(!!(x), 0)
-#define __inline__      __attribute((always_inline))
+#define __inline__      inline __attribute((always_inline))
 #define __warn_unused   __attribute((warn_unused_result))
 #define __const         __attribute((const))
 #define __printf(nfmt, narg) \
