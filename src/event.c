@@ -20,6 +20,7 @@
  * THE SOFTWARE.
  */
 #include "event.h"
+#include "rwlock.h"
 
 #include <pthread.h>
 #include <stdlib.h>
@@ -29,34 +30,65 @@
 
 static pthread_mutex_t mutex        = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t  cond         = PTHREAD_COND_INITIALIZER;
+/**
+ * TODO: This looks like a bad way of doing it...
+ * wipe this out and figure out a better way of doing a
+ * quit-like mutex.
+ */
+static rwlock_t        lock;
+static bool            running;
 static LIST_HEAD(g_events);
-static bool            running      = true;
 
 static void *events_thread(void *d)
 {
     struct event_t *event = NULL;
     struct timespec ts;
     struct timeval  tv;
+
+#ifdef __debug_events
+    log("Events thread start\n");
+#endif
     while (running) {
+        if (rwlock_rdtrylock(&lock) == EBUSY)
+            break;
+
         pthread_mutex_lock(&mutex);
         if (list_empty(&g_events))
             pthread_cond_wait(&cond, &mutex);
 
-        event = list_top(&g_events, struct event_t, list);
-        list_del(&event->list);
+        event = list_top(&g_events, struct event_t, children);
+        list_del(&event->children);
         if (!event)
             continue;
 
-        gettimeofday(&tv, NULL);
-        ts.tv_sec  = tv.tv_sec;
-        ts.tv_nsec = tv.tv_usec * 1000;
-        ts.tv_sec += event->delay;
+        if (event->delay > 0) {
+            gettimeofday(&tv, NULL);
+            ts.tv_sec  = tv.tv_sec;
+            ts.tv_nsec = tv.tv_usec * 1000;
+            ts.tv_sec += event->delay;
 
-        pthread_cond_timedwait(&cond, &mutex, &ts);
+            pthread_cond_timedwait(&cond, &mutex, &ts);
+        }
+
         pthread_mutex_unlock(&mutex);
         (*event->start_routine) (event->param);
+        rwlock_rdunlock(&lock);
     }
-    return NULL;
+
+    /*
+     * the thread was stopped by setting "running" to false...
+     * but before we exit, run any events waiting on the list.
+     */
+#ifdef __debug_events
+    log("Executing all of the remaining events... ");
+#endif
+    list_for_each(&g_events, event, children) {
+        (*event->start_routine) (event->param);
+        list_del(&event->children);
+    }
+#ifdef __debug_events
+    printf("done\n");
+#endif
 }
 
 void events_init(void)
@@ -76,14 +108,19 @@ void events_init(void)
     rc = pthread_create(&thread_id, &thread_attr, &events_thread, NULL);
     if (rc != 0)
         fatal("failed to create thread");
-#ifdef __debug_events
-    log("Events loaded!\n");
-#endif
+    rwlock_wrlock(&lock);
+    running = true;
+    rwlock_wrunlock(&lock);
 }
 
 void events_stop(void)
 {
+    rwlock_wrlock(&lock);
     running = false;
+    rwlock_wrunlock(&lock);
+
+    pthread_mutex_destroy(&mutex);
+    pthread_cond_destroy(&cond);
 }
 
 void event_add(int32_t delay, event_start_routine start, void *p)
@@ -100,7 +137,7 @@ void event_add(int32_t delay, event_start_routine start, void *p)
     event->param = p;
 
     pthread_mutex_lock(&mutex);
-    list_add(&g_events, &event->list);
+    list_add(&g_events, &event->children);
 
     if (empty)
         pthread_cond_signal(&cond);

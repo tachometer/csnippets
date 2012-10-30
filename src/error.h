@@ -1,6 +1,7 @@
 #ifndef __error_h
 #define __error_h
 
+#define LOG_NULL     -1
 /*
  * WARNING: Do not change these numbers as they're used as `index'
  * for `type_strings' see error.c fore more information.
@@ -14,6 +15,7 @@
 #define log(str, args...)       error(LOG_NOTICE, str, ##args)
 #define fatal(str, args...)     error_nret(str, ##args)
 #define warning(str, args...)   error(LOG_WARNING, str, ##args)
+#define print(str, args...)     error(LOG_NULL, str, ##args)
 
 #define log_init()          freopen(LOG_FILE, "w", stderr);
 

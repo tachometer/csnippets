@@ -1,11 +1,6 @@
 #include "map.h"
 #include "strmisc.h"
 
-#include <string.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <errno.h>
-
 static struct pair *get_pair(const struct map *map, const char *key)
 {
     unsigned int i, n, index;

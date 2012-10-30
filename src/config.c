@@ -1,12 +1,6 @@
 #include "config.h"
 #include "strmisc.h"
 
-#include <stdio.h>
-#include <stdlib.h>
-
-#include <errno.h>
-#include <string.h>
-
 struct centry_t *config_parse(const char *filename)
 {
     FILE *fp;
@@ -26,32 +20,37 @@ struct centry_t *config_parse(const char *filename)
         char *ptr = strchr(line, '#');
         if (ptr)
             *ptr = '\0';
+        if (*line == '\0' || *line == '\n')
+            continue;
 
         len = strlen(line);
         switch (open_brace) {
         case 0:
             for (i = 0; i < len; i++) {
-                /* do we have a section? */
                 if (line[i] == '{') {
                     open_brace = 1;
                     line[i] = 0;
 
-                    /* can safely create a new config entry... */
                     struct centry_t *entry;
-                    entry = malloc(sizeof(*entry));
+                    xmalloc(entry, sizeof(*entry), return NULL);
 
                     strncpy(entry->section, strtrim(line), 32);
 
                     entry->section[32] = '\0';
                     entry->def = NULL;
-                    entry->next_entry = ret;
-                    ret = entry;
+
+                    if (!ret) {
+                        ret = entry;
+                        list_head_init(&ret->children);
+                    }
+                    list_add(&ret->children, &entry->node);
                     break;
                 }
             }
-            if (!open_brace)
+            if (!open_brace) {
                 fatal("parser error: out of brace at line %d\n",
                         current_line);
+            }
             break;
         case 1:
             for (i = 0; i < len; i++) {
@@ -65,26 +64,26 @@ struct centry_t *config_parse(const char *filename)
                 struct cdef_t *def;
 
                 tokens = strexplode(line, '=', &n_tokens);
-                if (!tokens || n_tokens>1)
+                if (!tokens || n_tokens > 2) {
                     fatal("parser error: illegal equality at line %d\n",
                             current_line);
+                }
  
-                def = malloc(sizeof(*def));
-                if (!def)
-                    fatal("parser error: cannot allocate %zu bytes for config define\n",
-                            sizeof(*def));
-
-                if (n_tokens == 1) {
+                xmalloc(def, sizeof(*def), return NULL);
+                if (n_tokens == 2) {
                     strncpy(def->key, strtrim(tokens[0]), 33);
                     def->key[32] = '\0';
 
                     def->value = strdup(strtrim(tokens[1]));
-                } else
+                } else {
                     fatal("parser error: value with no key[?] at line %d\n",
                             current_line);
-
-                def->next_def = ret->def;
-                ret->def = def;
+                }
+                if (!ret->def) {
+                    ret->def = def;
+                    list_head_init(&ret->def->def_children);
+                }
+                list_add(&ret->def->def_children, &def->node);
             }
             break;
         }

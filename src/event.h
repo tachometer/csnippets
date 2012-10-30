@@ -30,7 +30,7 @@ struct event_t {
     int32_t delay;
     event_start_routine start_routine;
     void *param;
-    struct list_node list;
+    struct list_node children;
 };
 
 extern void events_init(void);

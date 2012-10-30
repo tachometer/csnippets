@@ -1,10 +1,7 @@
 #include "error.h"
 #include "asprintf.h"
-#include <stdio.h>
+
 #include <stdarg.h>
-#include <errno.h>
-#include <string.h>
-#include <stdlib.h>
 
 static const char *type_strings[] = { "FATAL", "WARNING", "NOTICE", NULL };
 extern char *prog;
@@ -31,10 +28,9 @@ void __noreturn log_errno(const char *str, ...)
 {
     va_list ap;
     char *buff;
-    int len;
 
     va_start(ap, str);
-    len = vasprintf(&buff, str, ap);
+    (void) vasprintf(&buff, str, ap);
     va_end(ap);
 
     __log("%s: %s (%d): %s\n", prog, buff, errno, strerror(errno));
@@ -46,12 +42,15 @@ void error(int error_type, const char *str, ...)
 {
     va_list va;
     char *buff;
-    int len;
 
     va_start(va, str);
-    len = vasprintf(&buff, str, va);
+    (void) vasprintf(&buff, str, va);
     va_end(va);
 
-    __log("%s: %s: %s", prog, type_strings[error_type], buff);
+    if (error_type == LOG_NULL) {       /* special type for logging */    
+        __log("%s: %s", prog, buff);
+    } else {
+        __log("%s: %s: %s", prog, type_strings[error_type], buff);
+    }
 }
 

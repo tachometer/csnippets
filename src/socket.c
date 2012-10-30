@@ -6,11 +6,7 @@
 #include <netdb.h>
 #include <time.h>
 #include <unistd.h>
-#include <errno.h>
 #include <stdarg.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdio.h>
 
 static void setup_async(int fd) {
     int old_flags;
