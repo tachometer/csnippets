@@ -56,7 +56,6 @@ int main(int argc, char **argv)
     events_init();
     event_add(1, test, (void *)1);
     event_add(2, test, (void *)2);
-    sleep(5);
     event_add(2, config_parse_event, (void *)"config_test");
     events_stop();
 

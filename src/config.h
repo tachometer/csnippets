@@ -3,6 +3,8 @@
 
 #include "list.h"
 
+__begin_header
+
 struct cdef_t {
     char key[33];
     char *value;
@@ -19,5 +21,6 @@ struct centry_t {
 
 extern struct centry_t *config_parse(const char *filename);
 
+__end_header
 #endif   /* __config_h */
 

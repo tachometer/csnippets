@@ -5,5 +5,5 @@ MAKEOPT=$(($CORES + 1))
 
 make clean
 make -j${MAKEOPT} || exit;
-cd bin && ./a && cd ..
+cd bin && gdb ./a && cd ..
 

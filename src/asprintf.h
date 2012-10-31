@@ -8,8 +8,12 @@
 
 #include <stdarg.h>
 
+__begin_header
+
 extern int __printf(2, 3) asprintf(char **strp, const char *fmt, ...);
 extern int vasprintf(char **strp, const char *fmt, va_list va);
+
+__end_header
 
 #endif  /* __asprintf_h */
 

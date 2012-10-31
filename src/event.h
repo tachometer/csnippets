@@ -24,6 +24,8 @@
 
 #include "list.h"
 
+__begin_header
+
 typedef void *(*event_start_routine) (void *);
 
 struct event_t {
@@ -38,5 +40,6 @@ extern void events_stop(void);
 
 extern void event_add(int32_t delay, event_start_routine start, void *p);
 
+__end_header
 #endif  /* __event_h */
 

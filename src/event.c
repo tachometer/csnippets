@@ -30,13 +30,8 @@
 
 static pthread_mutex_t mutex        = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t  cond         = PTHREAD_COND_INITIALIZER;
-/**
- * TODO: This looks like a bad way of doing it...
- * wipe this out and figure out a better way of doing a
- * quit-like mutex.
- */
-static rwlock_t        lock;
 static bool            running;
+static pthread_t       self;
 static LIST_HEAD(g_events);
 
 static void *events_thread(void *d)
@@ -49,9 +44,6 @@ static void *events_thread(void *d)
     log("Events thread start\n");
 #endif
     while (running) {
-        if (rwlock_rdtrylock(&lock) == EBUSY)
-            break;
-
         pthread_mutex_lock(&mutex);
         if (list_empty(&g_events))
             pthread_cond_wait(&cond, &mutex);
@@ -72,7 +64,7 @@ static void *events_thread(void *d)
 
         pthread_mutex_unlock(&mutex);
         (*event->start_routine) (event->param);
-        rwlock_rdunlock(&lock);
+        xfree(event);
     }
 
     /*
@@ -82,9 +74,14 @@ static void *events_thread(void *d)
 #ifdef __debug_events
     log("Executing all of the remaining events... ");
 #endif
-    list_for_each(&g_events, event, children) {
+    for (;;) {
+        event = list_top(&g_events, struct event_t, children);
+        if (!event)
+            break;
+
         (*event->start_routine) (event->param);
         list_del(&event->children);
+        xfree(event);
     }
 #ifdef __debug_events
     printf("done\n");
@@ -93,32 +90,29 @@ static void *events_thread(void *d)
 
 void events_init(void)
 {
-    pthread_t thread_id;
-    pthread_attr_t thread_attr;
+    pthread_attr_t attr;
     int rc;
 
-    rc = pthread_attr_init(&thread_attr);
+    rc = pthread_attr_init(&attr);
     if (rc != 0)
         fatal("failed to initialize thread attributes\n");
 
-    rc = pthread_attr_setdetachstate(&thread_attr, PTHREAD_CREATE_DETACHED);
+    rc = pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
     if (rc != 0)
         fatal("failed to setdetachstate");
 
-    rc = pthread_create(&thread_id, &thread_attr, &events_thread, NULL);
+    rc = pthread_create(&self, &attr, &events_thread, NULL);
     if (rc != 0)
         fatal("failed to create thread");
-    rwlock_wrlock(&lock);
     running = true;
-    rwlock_wrunlock(&lock);
 }
 
 void events_stop(void)
 {
-    rwlock_wrlock(&lock);
+    print("Stopping events thread\n");
     running = false;
-    rwlock_wrunlock(&lock);
 
+    pthread_join(self, NULL);
     pthread_mutex_destroy(&mutex);
     pthread_cond_destroy(&cond);
 }

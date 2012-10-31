@@ -7,6 +7,8 @@
 
 #include "container_of.h"
 
+__begin_header
+
 /**
  * struct list_node - an entry in a doubly-linked list
  * @next: next entry (self if empty)
@@ -466,6 +468,8 @@ static inline struct list_node *list_node_from_off_(void *ptr, size_t off)
 #define list_off_var_(var, member)			\
 	(container_off_var(var, member) +		\
 	 check_type(var->member, struct list_node))
+
+__end_header
 
 #endif /* __list_h */
 

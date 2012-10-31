@@ -1,6 +1,8 @@
 #ifndef __map_h
 #define __map_h
 
+__begin_header
+
 typedef unsigned long (*hash_function) (const char *);
 typedef bool (*hash_compare) (const void *v1, const void *v2);
 
@@ -37,5 +39,6 @@ extern bool map_remove(const struct map* map, const char *key);
 extern struct pair *map_put(const struct map *map, const char *key, void *value);
 extern int map_get_count(const struct map* map);
 
+__end_header
 #endif   /* __map_h */
 

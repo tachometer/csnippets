@@ -61,3 +61,12 @@
         _a > _b ? _a : _b;                \
     })
 #endif
+
+#ifdef __cplusplus
+#define __begin_header extern "C" {
+#define __end_header   }
+#else
+#define __begin_header
+#define __end_header
+#endif
+

@@ -1,6 +1,8 @@
 #ifndef __rwlock_h
 #define __rwlock_h
 
+__begin_header
+
 typedef union rwlock rwlock_t;
 
 union rwlock {
@@ -20,5 +22,6 @@ extern void rwlock_rdlock(rwlock_t *l);
 extern void rwlock_rdunlock(rwlock_t *l);
 extern int rwlock_rdtrylock(rwlock_t *l);
 
+__end_header
 #endif  /* __rwlock_h */
 

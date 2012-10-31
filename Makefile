@@ -18,7 +18,7 @@ OBJ_DIR = obj
 OBJ     = $(SRC:%.c=${OBJ_DIR}/%.o)
 PRE     = pre.h
 
-ifndef VERBOSE
+ifdef VERBOSE
 define compile
 	$(CC) -c $(CFLAGS) $1 -o $@ $<
 endef
