@@ -33,6 +33,33 @@ static void *config_parse_event(void *filename)
     }
 }
 
+void on_read(void *p, const char *buffer, int len)
+{
+    struct socket_t *s = sock_cast(p);
+    printf("[%d]: %s", s->fd, buffer);
+}
+
+void on_disconnect(void *p)
+{
+    struct socket_t *s = sock_cast(p);
+    printf("%s disconnected\n", s->ip);
+    xfree(s);
+}
+
+void on_connect(void *p)
+{
+    struct socket_t *s = sock_cast(p);
+    s->on_read = on_read;
+    s->on_disconnect = on_disconnect;
+}
+
+void on_accept(void *p, void *new)
+{
+    struct socket_t *n = sock_cast(new);
+    n->on_connect = on_connect;
+    printf("Accepted connection from %s\n", n->ip);
+}
+
 int main(int argc, char **argv)
 {
     prog = argv[0];
@@ -62,8 +89,9 @@ int main(int argc, char **argv)
 #endif
 
     struct socket_t *sock = socket_create();
-    if (!socket_listen(sock, NULL, 6667))
-        fatal("kef\n");
+    if (!socket_listen(sock, NULL, 1337))
+        fatal("failed!\n");
+    sock->on_accept = on_accept;
     socket_poll(sock);
     return 0;
 }

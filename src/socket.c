@@ -76,7 +76,8 @@ static __inline__ void setup_socket(struct socket_t *socket)
 {
     socket->write = __write;
     socket->close = __close;
-    socket->idle         = time(NULL);
+    socket->idle  = time(NULL);
+    socket->type  = 0;
     list_head_init(&socket->children);
 }
 
@@ -185,7 +186,6 @@ void socket_poll(struct socket_t *socket)
 
     event.data.fd = socket->fd;
     event.events  = EPOLLIN | EPOLLET;
-
     if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, socket->fd, &event) == -1) {
         log_errno("epoll_ctl failed");
         return;
@@ -195,95 +195,80 @@ void socket_poll(struct socket_t *socket)
     for (;;) {
         n_fds = epoll_wait(epoll_fd, events, MAX_EVENTS, -1);
         for (i = 0; i < n_fds; i++) {
-            printf("KEF %d\n", events[i].data.fd);
+            struct socket_t *sock = NULL;
             if (events[i].events & EPOLLERR || events[i].events & EPOLLHUP ||
                     !(events[i].events & EPOLLIN)) {
                 warning("epoll error\n");
                 close(events[i].data.fd);
             } else if (socket->fd == events[i].data.fd) {
                 if (socket->type == STREAM_SERVER) {
-		    struct socket_t *new_socket;
-		    struct sockaddr_in their_addr;
-		    socklen_t len = sizeof(their_addr);
-		    int their_fd;
+                    struct socket_t *new_socket;
+                    struct sockaddr_in their_addr;
+                    socklen_t len = sizeof(their_addr);
+                    int their_fd;
 
-		    their_fd = accept(socket->fd, &their_addr, &len);
-		    if (their_fd == -1) {
-			if (errno != EAGAIN && errno != EWOULDBLOCK)
-			    log_errno("accept() on fd %d", socket->fd);
-			break;
-		    }
-
-		    xmalloc(new_socket, sizeof(*new_socket), break);
-		    setup_socket(new_socket);
-		    new_socket->fd = their_fd;
-		    strncpy(new_socket->ip, inet_ntoa(their_addr.sin_addr), 16);
-		    setup_async(new_socket);
-
-		    if (socket->on_accept) {
-			socket->on_accept(socket, new_socket);
-			if (new_socket->on_connect)
-			    new_socket->on_connect(new_socket);
-		    }
-    #ifdef __debug_socket
-		    log("Accepted incoming connected from %s on fd %d\n", new_socket->ip, new_socket->fd);
-    #endif
-		    list_add(&socket->children, &new_socket->node);
-
-		    event.data.fd = their_fd;
-		    event.events = EPOLLIN | EPOLLET;
-		    if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, their_fd, &event) == -1) {
-			log_errno("epoll_ctl returned -1 ;-(");
-			break;
-		    }
-		    continue;
-                }
-            }
-
-	    bool done = false, found = false;
-	    struct socket_t *sock;
-            if (!list_empty(&socket->children)) {
-	        list_for_each(&socket->children, sock, node) {
-		    if (sock->fd == events[i].data.fd) {
-                        found = true;
+                    their_fd = accept(socket->fd, &their_addr, &len);
+                    if (their_fd == -1) {
+                        if (errno != EAGAIN && errno != EWOULDBLOCK)
+                            log_errno("accept() on fd %d", socket->fd);
                         break;
                     }
+
+                    xmalloc(new_socket, sizeof(*new_socket), break);
+                    setup_socket(new_socket);
+                    new_socket->fd = their_fd;
+                    strncpy(new_socket->ip, inet_ntoa(their_addr.sin_addr), 16);
+                    setup_async(new_socket);
+
+                    if (socket->on_accept) {
+                        socket->on_accept(socket, new_socket);
+                        if (new_socket->on_connect)
+                            new_socket->on_connect(new_socket);
+                    }
+                    list_add(&socket->children, &new_socket->node);
+
+                    event.data.fd = their_fd;
+                    event.events = EPOLLIN | EPOLLET;
+                    if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, their_fd, &event) == -1) {
+                        log_errno("epoll_ctl returned -1 ;-(");
+                        break;
+                    } 
+                    continue;
+                } else
+                    sock = socket;
+            }
+	    bool done = false;
+            if (socket->type == STREAM_SERVER && !list_empty(&socket->children)) {
+	        list_for_each(&socket->children, sock, node) {
+		    if (sock->fd == events[i].data.fd)
+                        break;
                 }
             }
+            for (;;) {
+                ssize_t count;
+                char buffer[4096];
 
-	    for (;;) {
-		ssize_t count;
-		char buffer[4096];
+                count = read(events[i].data.fd, buffer, sizeof buffer);
+                if (count == -1) {
+                    if (errno != EAGAIN)
+                        done = true;
+                    break;
+                } else if (count == 0) { /* EOF */
+                    done = true;
+                    break;
+                }
 
-		count = read(events[i].data.fd, buffer, sizeof buffer);
-		if (count == -1) {
-		    if (errno != EAGAIN)
-			done = true;
-		    break;
-		} else if (count == 0) { /* EOF */
-		    done = true;
-		    break;
-		}
-#ifdef __debug_socket
-		printf("[%d]: %s\n", events[i].data.fd, buffer);
-#endif
-                if (found) {
-		    if (sock->on_read)
-			sock->on_read(sock, buffer, count);
-		    sock->write(sock, "hello world\n\0", 16);
-		}
-	    }
-	    if (done) {
-#ifdef __debug_socket
-		printf("Closing connection on %d\n", events[i].data.fd);
-#endif
-		close(events[i].data.fd);
-		if (found) {
+                if (sock && sock->on_read)
+                    sock->on_read(sock, buffer, count);
+            }
+            if (done) {
+                close(events[i].data.fd);
+                if (sock) {
+                    list_del(&sock->node);
                     if (sock->on_disconnect)
                         sock->on_disconnect(sock);
-		    list_del(&sock->node);
-		}
-	    }
+                }
+            }
         }
     }
 
