@@ -3,6 +3,7 @@
 #include "map.h"
 #include "event.h"
 #include "config.h"
+#include "socket.h"
 
 #include <time.h>
 #include <stdio.h>
@@ -36,7 +37,7 @@ int main(int argc, char **argv)
 {
     prog = argv[0];
     log_init();
-
+#if 0
     char *s;
     struct map map = MAP_INIT;
     map_init(&map);
@@ -58,7 +59,12 @@ int main(int argc, char **argv)
     event_add(2, test, (void *)2);
     event_add(2, config_parse_event, (void *)"config_test");
     events_stop();
+#endif
 
+    struct socket_t *sock = socket_create();
+    if (!socket_listen(sock, NULL, 6667))
+        fatal("kef\n");
+    socket_poll(sock);
     return 0;
 }
 

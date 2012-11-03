@@ -20,9 +20,8 @@ struct centry_t *config_parse(const char *filename)
         char *ptr = strchr(line, '#');
         if (ptr)
             *ptr = '\0';
-        if (*line == '\0' || *line == '\n')
+        if (unlikely(*line == '\0' || *line == '\n'))
             continue;
-
         len = strlen(line);
         switch (open_brace) {
         case 0:

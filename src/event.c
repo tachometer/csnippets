@@ -72,19 +72,28 @@ static void *events_thread(void *d)
      * but before we exit, run any events waiting on the list.
      */
 #ifdef __debug_events
-    log("Executing all of the remaining events... ");
+    print("Executing all of the remaining events...\n");
 #endif
     for (;;) {
         event = list_top(&g_events, struct event_t, children);
         if (!event)
             break;
 
+        if (event->delay > 0) {
+            gettimeofday(&tv, NULL);
+            ts.tv_sec  = tv.tv_sec;
+            ts.tv_nsec = tv.tv_usec * 1000;
+            ts.tv_sec += event->delay;
+
+            pthread_cond_timedwait(&cond, &mutex, &ts);
+        }
+
         (*event->start_routine) (event->param);
         list_del(&event->children);
         xfree(event);
     }
 #ifdef __debug_events
-    printf("done\n");
+    print("done\n");
 #endif
 }
 

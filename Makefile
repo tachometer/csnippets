@@ -1,9 +1,13 @@
 CC = gcc
 
+prefix = /usr/local
+bindir = ${prefix}/bin
+hdrdir = ${prefix}/include
+
 ifndef FLAGS
     FLAGS = -g -O0
 endif
-DEFINES     = -D_GNU_SOURCE -D__debug_list -D__debug_events
+DEFINES     = -D_GNU_SOURCE -D__debug_list -D__debug_events -D__debug_socket
 INCLUDE_DIR = src
 CFLAGS      = ${FLAGS} -I${INCLUDE_DIR} -fstack-protector -Wall -Wno-unused-parameter -Wno-unused-but-set-variable \
 	      -Wno-sign-compare -Wextra -Wfatal-errors -Wno-return-type ${DEFINES}
@@ -37,6 +41,15 @@ endef
 all: ${BIN_DIR}/$(BIN)
 clean:
 	$(RM) ${OBJ_DIR}/*.o ${OBJ_DIR}/*.gch ${BIN_DIR}/$(BIN)
+
+install: ${BIN_DIR}/${BIN} ${SRC_DIR}/${SRC}
+	install -d ${bindir}
+	install -m 755 ${BIN_DIR}/${BIN} ${bindir}
+	cp ${INCLUDE_DIR}/*.h ${hdrdir}
+
+uninstall: ${bindir}
+	# TODO: Remove headers too
+	${RM} ${bindir}/${BIN}
 
 ${OBJ_DIR}/pre.h.gch: ${SRC_DIR}/${PRE}
 	${compile}
