@@ -282,7 +282,6 @@ void socket_poll(struct socket_t *socket)
                     if (sock->on_disconnect)
                         sock->on_disconnect(sock);
 		    list_del(&sock->node);
-		    break;
 		}
 	    }
         }
