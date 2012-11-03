@@ -69,6 +69,8 @@ static int __close(void *self)
         close(socket->fd);
 
     socket->fd = -1;
+    if (socket->on_disconnect)
+        socket->on_disconnect(socket);
     return 0;
 }
 
@@ -261,13 +263,9 @@ void socket_poll(struct socket_t *socket)
                 if (sock && sock->on_read)
                     sock->on_read(sock, buffer, count);
             }
-            if (done) {
-                close(events[i].data.fd);
-                if (sock) {
-                    list_del(&sock->node);
-                    if (sock->on_disconnect)
-                        sock->on_disconnect(sock);
-                }
+            if (done && sock) {
+                list_del(&sock->node);
+                sock->close(sock);
             }
         }
     }

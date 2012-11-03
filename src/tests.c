@@ -51,6 +51,9 @@ void on_connect(void *p)
     struct socket_t *s = sock_cast(p);
     s->on_read = on_read;
     s->on_disconnect = on_disconnect;
+
+    char hello[] = "hi there!\n";
+    s->write(s, hello,sizeof(hello));;
 }
 
 void on_accept(void *p, void *new)
