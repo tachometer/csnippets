@@ -110,7 +110,7 @@ struct pair *map_put(const struct map *map, const char *key, void* value)
     key_len = strlen(key);
     pair = get_pair(map, key);
 
-    if (likely(pair && pair->value == value))
+    if (pair && map->hash_comp(pair->value, value))
         return pair;
 
     new_key = malloc((key_len + 1) * sizeof(char));
@@ -119,10 +119,8 @@ struct pair *map_put(const struct map *map, const char *key, void* value)
 
     bucket = map->buckets;
     if (bucket->count == 0) {
-        bucket->pairs = malloc(sizeof(struct pair));    /* initial pair */
-        if (!bucket->pairs)
-            goto out;
-
+        xmalloc(bucket->pairs, sizeof(struct pair),    /* initial pair */
+                goto out);
         bucket->count = 1;
     } else {
         xrealloc(tmp_pairs, bucket->pairs, (bucket->count + 1) * sizeof(struct pair),
