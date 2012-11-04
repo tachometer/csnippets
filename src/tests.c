@@ -53,7 +53,7 @@ void on_connect(void *p)
     s->on_disconnect = on_disconnect;
 
     char hello[] = "hi there!\n";
-    s->write(s, hello,sizeof(hello));;
+    s->write(s, hello,sizeof(hello));
 }
 
 void on_accept(void *p, void *new)
@@ -92,6 +92,8 @@ int main(int argc, char **argv)
 #endif
 
     struct socket_t *sock = socket_create();
+    // uncomment the following line if doing a client instead
+    // sock->on_connect=on_connect;
     if (!socket_listen(sock, NULL, 1337))
         fatal("failed!\n");
     sock->on_accept = on_accept;

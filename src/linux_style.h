@@ -7,6 +7,7 @@
 #define unlikely(x)     __builtin_expect(!!(x), 0)
 #define __inline__      inline __attribute((always_inline))
 #define __warn_unused   __attribute((warn_unused_result))
+#define __weak          __attribute((weak))
 #define __const         __attribute((const))
 #define __printf(nfmt, narg) \
     __attribute((format(__printf__, nfmt, narg)))

@@ -16,16 +16,26 @@
  */
 #include "socket.h"
 
+#ifdef _WIN32
+#include <winsock2.h>
+#else
 #include <fcntl.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
-#include <netdb.h>
-#include <time.h>
 #include <unistd.h>
+#include <netdb.h>
+#endif
+#include <time.h>
 #include <stdarg.h>
 #include <sys/time.h>
 #include <time.h>
-#include <sys/epoll.h>
+
+extern void __socket_set_init(const struct socket_t *socket) __weak;
+extern void __socket_set_deinit(void) __weak;
+extern void __socket_set_add(const struct socket_t *socket) __weak;
+extern void __socket_set_del(const struct socket_t *socket) __weak;
+extern int  __socket_set_poll(const struct socket_t *socket) __weak;
+extern int  __socket_set_get_active_fd(int i) __weak;
 
 static void setup_async(const struct socket_t *socket)
 {
@@ -63,7 +73,7 @@ static int __close(void *self)
     if (socket->fd > 0)
         close(socket->fd);
 
-    socket->fd = -1;
+    __socket_set_del(socket);
     if (socket->on_disconnect)
         socket->on_disconnect(socket);
     return 0;
@@ -130,20 +140,21 @@ bool socket_connect(struct socket_t *socket, const char *addr, int32_t port)
                 case EISCONN:
                 case EALREADY:
                 case EINPROGRESS:
-                    setsockopt(socket->fd, SOL_SOCKET, SO_LINGER,    0, 0);
-                    setsockopt(socket->fd, SOL_SOCKET, SO_REUSEADDR, 0, 0);
-                    setsockopt(socket->fd, SOL_SOCKET, SO_KEEPALIVE, 0, 0);
                     connected = true;
                     break;
             }
-        } else
+        } else {
             connected = true;
+            break;
+        }
     }
 
 #ifdef __debug_socket
-    print(connected ? "Successfully connected to %s\n" : "Failed to connect to %s.", addr);
+    print("Successfully connected to %s\n", addr);
 #endif
-    return connected;
+    if (socket->on_connect)
+        socket->on_connect(socket);
+    return true;
 }
 
 bool socket_listen(struct socket_t *socket, const char *address, int32_t port)
@@ -171,33 +182,18 @@ bool socket_listen(struct socket_t *socket, const char *address, int32_t port)
 
 void socket_poll(struct socket_t *socket)
 {
-    int n_fds, i, epoll_fd;
-    struct epoll_event event;
-    struct epoll_event *events;
-
-    epoll_fd = epoll_create1(0);
-    if (epoll_fd == -1) {
-        log_errno("failed to create epoll fd");
-        return;
-    }
-
-    event.data.fd = socket->fd;
-    event.events  = EPOLLIN | EPOLLET;
-    if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, socket->fd, &event) == -1) {
-        log_errno("epoll_ctl failed");
-        return;
-    }
-
-    xcalloc(events, MAX_EVENTS, sizeof(event), return);
+    int n_fds, i;
+    __socket_set_init(socket);
+    __socket_set_add(socket);
     for (;;) {
-        n_fds = epoll_wait(epoll_fd, events, MAX_EVENTS, -1);
+        n_fds = __socket_set_poll(socket);
         for (i = 0; i < n_fds; i++) {
             struct socket_t *sock = NULL;
-            if (events[i].events & EPOLLERR || events[i].events & EPOLLHUP ||
-                    !(events[i].events & EPOLLIN)) {
-                warning("epoll error\n");
-                close(events[i].data.fd);
-            } else if (socket->fd == events[i].data.fd) {
+            int active_fd = __socket_set_get_active_fd(i);
+            if (active_fd < 0)
+                continue;
+
+            if (socket->fd == active_fd) {
                 if (socket->type == STREAM_SERVER) {
                     struct socket_t *new_socket;
                     struct sockaddr_in their_addr;
@@ -213,9 +209,10 @@ void socket_poll(struct socket_t *socket)
 
                     xmalloc(new_socket, sizeof(*new_socket), break);
                     setup_socket(new_socket);
+                    setup_async(new_socket);
+
                     new_socket->fd = their_fd;
                     strncpy(new_socket->ip, inet_ntoa(their_addr.sin_addr), 16);
-                    setup_async(new_socket);
 
                     if (socket->on_accept) {
                         socket->on_accept(socket, new_socket);
@@ -223,21 +220,15 @@ void socket_poll(struct socket_t *socket)
                             new_socket->on_connect(new_socket);
                     }
                     list_add(&socket->children, &new_socket->node);
-
-                    event.data.fd = their_fd;
-                    event.events = EPOLLIN | EPOLLET;
-                    if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, their_fd, &event) == -1) {
-                        log_errno("epoll_ctl returned -1 ;-(");
-                        break;
-                    } 
+                    __socket_set_add(new_socket);
                     continue;
-                } else
-                    sock = socket;
+                }
+                sock=socket;
             }
 	    bool done = false;
             if (socket->type == STREAM_SERVER && !list_empty(&socket->children)) {
 	        list_for_each(&socket->children, sock, node) {
-		    if (sock->fd == events[i].data.fd)
+		    if (sock->fd == active_fd)
                         break;
                 }
             }
@@ -245,9 +236,9 @@ void socket_poll(struct socket_t *socket)
                 ssize_t count;
                 char buffer[4096];
 
-                count = read(events[i].data.fd, buffer, sizeof buffer);
+                count = read(active_fd, buffer, sizeof buffer);
                 if (count == -1) {
-                    if (errno != EAGAIN)
+                    if (errno != EAGAIN || errno != EWOULDBLOCK)
                         done = true;
                     break;
                 } else if (count == 0) { /* EOF */
@@ -265,8 +256,8 @@ void socket_poll(struct socket_t *socket)
         }
     }
 
-    free(events);
-    close(socket->fd);
+    __socket_set_deinit();
+    socket->close(socket);
 }
 
 void socket_close(struct socket_t *socket)

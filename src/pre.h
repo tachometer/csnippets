@@ -14,6 +14,7 @@
 
 #include "linux_style.h"
 #include "error.h"
+#include "platform.h"
 
 /*
  * countof() returns the count of array, i.e
