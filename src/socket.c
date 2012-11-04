@@ -18,14 +18,14 @@
 
 #ifdef _WIN32
 #include <winsock2.h>
+#include <ws2tcpip.h>    /* socklen_t */
 #else
-#include <fcntl.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <netdb.h>
 #endif
-#include <time.h>
+#include <fcntl.h>
 #include <stdarg.h>
 #include <sys/time.h>
 #include <time.h>
@@ -37,15 +37,23 @@ extern void __socket_set_del(const struct socket_t *socket) __weak;
 extern int  __socket_set_poll(const struct socket_t *socket) __weak;
 extern int  __socket_set_get_active_fd(int i) __weak;
 
+#ifdef _WIN32
+static bool is_initialized = false;
+#endif
+
 static void setup_async(const struct socket_t *socket)
 {
     int flags;
-
+#ifndef _WIN32
     flags = fcntl(socket->fd, F_GETFL, 0);
     if (!(flags & O_NONBLOCK))
         flags |= O_NONBLOCK;
 
     fcntl(socket->fd, F_SETFL, flags);
+#else
+    flags = 1;
+    ioctlsocket(socket->fd, FIONBIO, (u_long *)&flags);
+#endif
 }
 
 static int __write(void *self, const char *data, int len)
@@ -56,7 +64,7 @@ static int __write(void *self, const char *data, int len)
         return -1;
 
     do
-        ret = write(socket->fd, data, len);
+        ret = send(socket->fd, data, len, 0);
     while (ret == -1 && errno == EINTR);
 
     if (socket->on_write)
@@ -81,6 +89,13 @@ static int __close(void *self)
 
 static __inline__ void setup_socket(struct socket_t *socket)
 {
+#ifdef _WIN32
+    if (!is_initialized) {
+        WSADATA wsaData;
+        WSAStartup(MAKEWORD(2,2), &wsaData);
+        is_initialized=true;
+    }
+#endif
     socket->write = __write;
     socket->close = __close;
     socket->idle  = time(NULL);
@@ -124,22 +139,26 @@ bool socket_connect(struct socket_t *socket, const char *addr, int32_t port)
         return false;
     if (!(hp = gethostbyname(addr)))
         return false;
+#ifdef WIN32
+    memcpy((char*)&srv.sin_addr, (char*)hp->h_addr, hp->h_length);
+#else
+    bcopy((char*)hp->h_addr, (char*)&srv.sin_addr, hp->h_length);
+#endif
 
-    bcopy((char *)hp->h_addr, (char *)&srv.sin_addr, hp->h_length);
     srv.sin_family = AF_INET;
     srv.sin_port = htons(port);
 
     start = time(NULL);
     while (!connected && time(NULL) - start < 10) {
-        errno = 0;
+        set_last_error(0);
 #ifdef __debug_socket
         print("Trying %s...\n", addr);
 #endif
         if (connect(socket->fd, (struct sockaddr *)&srv, sizeof(srv)) == -1) {
-            switch (errno) {
-                case EISCONN:
-                case EALREADY:
-                case EINPROGRESS:
+            switch (ERRNO) {
+                case E_ISCONN:
+                case E_ALREADY:
+                case E_INPROGRESS:
                     connected = true;
                     break;
             }
@@ -166,7 +185,6 @@ bool socket_listen(struct socket_t *socket, const char *address, int32_t port)
     if (socket->fd < 0)
         return false;
 
-    bzero((char *)&srv, sizeof(srv));
     srv.sin_family = AF_INET;          /* UDP -> PF_INET */
     srv.sin_addr.s_addr = !address ? INADDR_ANY : inet_addr(address);
     srv.sin_port = htons(port);
@@ -202,7 +220,7 @@ void socket_poll(struct socket_t *socket)
 
                     their_fd = accept(socket->fd, &their_addr, &len);
                     if (their_fd == -1) {
-                        if (errno != EAGAIN && errno != EWOULDBLOCK)
+                        if (ERRNO != E_AGAIN && ERRNO != E_BLOCK)
                             log_errno("accept() on fd %d", socket->fd);
                         break;
                     }
@@ -240,7 +258,11 @@ void socket_poll(struct socket_t *socket)
 
                 count = read(active_fd, buffer, sizeof buffer);
                 if (count == -1) {
-                    if (errno != EAGAIN || errno != EWOULDBLOCK)
+#ifndef _WIN32
+                    if (errno != EAGAIN && errno != EWOULDBLOCK)
+#else
+                    if (WSAGetLastError() == WSAEWOULDBLOCK)
+#endif
                         done = true;
                     break;
                 } else if (count == 0) { /* EOF */

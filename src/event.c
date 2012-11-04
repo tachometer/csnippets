@@ -15,7 +15,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include "event.h"
-#include "rwlock.h"
 
 #include <pthread.h>
 #include <stdlib.h>
@@ -113,7 +112,9 @@ void events_init(void)
 
 void events_stop(void)
 {
-    print("Stopping events thread\n");
+#ifdef __debug_events
+    log("Stopping events thread\n");
+#endif
     running = false;
 
     pthread_join(self, NULL);
