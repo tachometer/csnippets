@@ -225,13 +225,15 @@ void socket_poll(struct socket_t *socket)
                 }
                 sock=socket;
             }
-	    bool done = false;
+
             if (socket->type == STREAM_SERVER && !list_empty(&socket->children)) {
-	        list_for_each(&socket->children, sock, node) {
-		    if (sock->fd == active_fd)
+                list_for_each(&socket->children, sock, node) {
+                    if (sock->fd == active_fd)
                         break;
                 }
             }
+
+            bool done = false;
             for (;;) {
                 ssize_t count;
                 char buffer[4096];
