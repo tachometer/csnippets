@@ -79,7 +79,11 @@ static int __close(void *self)
         return -1;
 
     if (socket->fd > 0)
+#ifdef _WIN32
+        closesocket(socket->fd);
+#else
         close(socket->fd);
+#endif
 
     __socket_set_del(socket);
     if (socket->on_disconnect)
@@ -258,11 +262,7 @@ void socket_poll(struct socket_t *socket)
 
                 count = read(active_fd, buffer, sizeof buffer);
                 if (count == -1) {
-#ifndef _WIN32
-                    if (errno != EAGAIN && errno != EWOULDBLOCK)
-#else
-                    if (WSAGetLastError() == WSAEWOULDBLOCK)
-#endif
+                    if (ERRNO != E_AGAIN && errno != E_BLOCK)
                         done = true;
                     break;
                 } else if (count == 0) { /* EOF */
