@@ -1,3 +1,4 @@
+#include "pre.h"
 #include "config.h"
 #include "asprintf.h"
 #include "map.h"
@@ -33,32 +34,28 @@ static void *config_parse_event(void *filename)
     }
 }
 
-void on_read(void *p, const char *buffer, int len)
+void on_read(connection_t *s, const char *buffer, int len)
 {
-    struct socket_t *s = sock_cast(p);
     printf("[%d]: %s", s->fd, buffer);
 }
 
-void on_disconnect(void *p)
+void on_disconnect(connection_t *s)
 {
-    struct socket_t *s = sock_cast(p);
     printf("%s disconnected\n", s->ip);
     xfree(s);
 }
 
-void on_connect(void *p)
+void on_connect(connection_t *s)
 {
-    struct socket_t *s = sock_cast(p);
     s->on_read = on_read;
     s->on_disconnect = on_disconnect;
 
     char hello[] = "hi there!\n";
-    s->write(s, hello,sizeof(hello));
+    write(s->fd, hello,sizeof(hello));
 }
 
-void on_accept(void *p, void *new)
+void on_accept(socket_t *s, connection_t *n)
 {
-    struct socket_t *n = sock_cast(new);
     n->on_connect = on_connect;
     printf("Accepted connection from %s\n", n->ip);
 }
@@ -91,12 +88,12 @@ int main(int argc, char **argv)
     events_stop();
 #endif
 
-    struct socket_t *sock = socket_create();
-    // uncomment the following line if doing a client instead
-    // sock->on_connect=on_connect;
-    if (!socket_listen(sock, NULL, 1337))
+    socket_t *sock = socket_create();
+    connection_t *conn = malloc(sizeof(connection_t));
+    conn->on_connect=on_connect;
+    if (!socket_connect(conn, sock, "irc.freenode.net", "6667"))
         fatal("failed!\n");
-    sock->on_accept = on_accept;
+    //sock->on_accept = on_accept;
     socket_poll(sock);
     return 0;
 }

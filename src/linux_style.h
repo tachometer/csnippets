@@ -8,16 +8,15 @@
 #define __inline__      inline __attribute((always_inline))
 #define __warn_unused   __attribute((warn_unused_result))
 #define __weak          __attribute((weak))
-#define __const         __attribute((const))
 #define __printf(nfmt, narg) \
     __attribute((format(__printf__, nfmt, narg)))
 #else
 #define __noreturn
 #define likely(x) (x)
 #define unlikely(x) (x)
-#define __inline inline
+#define __inline__ inline
 #define __warn_unused
-#define __const const
+#define __weak
 #define __printf(nfmt, narg)
 #endif
 

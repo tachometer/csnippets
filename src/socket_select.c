@@ -19,10 +19,10 @@
 
 static fd_set active_fd_set, read_fd_set;
 
-void __socket_set_init(const struct socket_t *socket)
+void __socket_set_init(int fd)
 {
     FD_ZERO(&active_fd_set);
-    FD_SET(socket->fd, &active_fd_set);
+    FD_SET(fd, &active_fd_set);
 }
 
 __inline__ void __socket_set_deinit(void)
@@ -30,17 +30,17 @@ __inline__ void __socket_set_deinit(void)
     /* nothing */
 }
 
-void __socket_set_add(const struct socket_t *socket)
+void __socket_set_add(int fd)
 {
-    FD_SET(socket->fd, &active_fd_set);
+    FD_SET(fd, &active_fd_set);
 }
 
-void __socket_set_del(const struct socket_t *socket)
+void __socket_set_del(int fd)
 {
-    FD_CLR(socket->fd, &active_fd_set);
+    FD_CLR(fd, &active_fd_set);
 }
 
-int __socket_set_poll(const struct socket_t *socket)
+int __socket_set_poll(int fd)
 {
     read_fd_set=active_fd_set;
     if (select(FD_SETSIZE, &read_fd_set, NULL, NULL, NULL) < 0)

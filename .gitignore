@@ -1,0 +1,8 @@
+# folders
+obj/
+bin/
+lib/
+.kdev4/
+
+*.kdev4
+
