@@ -80,4 +80,14 @@ extern void socket_connect(connection_t *conn, const char *addr, const char *ser
  */
 extern void socket_listen(socket_t *socket, const char *address, int32_t port, long max_conns);
 
+/**
+ * Write on a socket connection
+ *
+ * @param conn a connection created by socket_connect() or from the listening socket.
+ * @param data the data to send
+ * @return errno
+ */
+extern int socket_write(connection_t *conn, const char *fmt, ...);
+
 #endif    /* __socket_h */
+

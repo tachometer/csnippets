@@ -155,6 +155,16 @@ out:
 socket_t *socket_create(void)
 {
     socket_t *ret = malloc(sizeof(*ret));
+#ifdef _WIN32
+    WSAData wsa;
+    if (!initialized) {
+        if (!WSAStartup(MAKEWORD(2,2) &wsa)) {
+            fprintf(stderr, "WSAStartup() failed\n");
+            abort();
+        }
+        initialized = true;
+    }
+#endif
     if (!ret)
         return NULL;
     ret->conn = NULL;
@@ -223,6 +233,37 @@ void socket_listen(socket_t *sock, const char *address, int32_t port, long max_c
         return;
 
     poll_on_server(sock);
+}
+
+int socket_write(connection_t *conn, const char *fmt, ...)
+{
+    char *data;
+    int len;
+    int err;
+    va_list va;
+
+    if (!conn || conn->fd < 0)
+        return EINVAL;
+
+    va_start(va, data);
+    len = vasprintf(&data, fmt, va);
+    va_end(va);
+
+    if (!data)
+        return ENOMEM;
+
+    err = send(conn->fd, data, len, 0);
+    if (err < 0) {
+        err = ERRNO;
+        goto out;
+    }
+
+    if (err != len)
+        fprintf(stderr,
+                "socket_write(): the data sent may be incomplete!\n");
+out:
+    free(data);
+    return err;
 }
 
 void socket_free(socket_t *socket)

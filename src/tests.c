@@ -50,8 +50,7 @@ void on_connect(connection_t *s)
     s->on_read = on_read;
     s->on_disconnect = on_disconnect;
 
-    char hello[] = "hi there!\n";
-    write(s->fd, hello,sizeof(hello));
+    socket_write(s, "hi %s\n", s->ip);
 }
 
 void on_accept(socket_t *s, connection_t *n)
@@ -88,10 +87,17 @@ int main(int argc, char **argv)
     events_stop();
 #endif
 
-    //socket_t *sock = socket_create();
-    connection_t *conn = malloc(sizeof(connection_t));
-    conn->on_connect=on_connect;
-    socket_connect(conn, "irc.freenode.net", "6667");
+    if (argc > 2) {
+        connection_t *conn = malloc(sizeof(connection_t));
+        conn->on_connect = on_connect;
+        socket_connect(conn, argv[1], argv[2]);
+    } else {
+        socket_t *sock = socket_create();
+        if (!sock)
+            return 1;
+        sock->on_accept = on_accept;
+        socket_listen(sock, NULL, 1337, 10);
+    }
     return 0;
 }
 
