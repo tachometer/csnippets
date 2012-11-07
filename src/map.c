@@ -38,7 +38,7 @@ static bool hash_cmp(const char *v1, const char *v2)
     return v1 && !strcmp(v1, v2);
 }
 
-void map_init(struct map* map)
+void map_new(struct map* map)
 {
     xmalloc(map->buckets, map->count * sizeof(struct bucket), return);
     if (!map->hash_function)

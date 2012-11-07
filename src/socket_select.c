@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2012  asamy <f.fallen45@gmail.com>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -14,46 +14,69 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifdef __use_select
+#if defined __use_select
+
 #include "socket.h"
 
-static fd_set active_fd_set, read_fd_set;
+struct sock_events {
+    fd_set active_fd_set, read_fd_set;
+};
 
-void __socket_set_init(int fd)
+void *__socket_set_init(int fd)
 {
-    FD_ZERO(&active_fd_set);
-    FD_SET(fd, &active_fd_set);
+    struct sock_events *ev = malloc(sizeof(struct sock_events));
+    if (!ev)
+        return NULL;
+
+    FD_ZERO(&ev->active_fd_set);
+    FD_SET(fd, &ev->active_fd_set);
+
+    return ev;
 }
 
-__inline__ void __socket_set_deinit(void)
+void __socket_set_deinit(void *p)
 {
-    /* nothing */
+    free(p);
 }
 
-void __socket_set_add(int fd)
+void __socket_set_add(void *p, int fd)
 {
-    FD_SET(fd, &active_fd_set);
+    struct sock_events *evs = (struct sock_events *)p;
+    if (!evs)
+        return;
+    FD_SET(fd, &evs->active_fd_set);
 }
 
-void __socket_set_del(int fd)
+void __socket_set_del(void *p, int fd)
 {
-    FD_CLR(fd, &active_fd_set);
+    struct sock_events *evs = (struct sock_events *)p;
+    if (!evs)
+        return;
+    FD_CLR(fd, &evs->active_fd_set);
 }
 
-int __socket_set_poll(int fd)
+int __socket_set_poll(void *p)
 {
-    read_fd_set=active_fd_set;
-    if (select(FD_SETSIZE, &read_fd_set, NULL, NULL, NULL) < 0)
+    struct sock_events *evs = (struct sock_events *)p;
+    if (!evs)
         return 0;
+
+    evs->read_fd_set = evs->active_fd_set;
+    if (select(FD_SETSIZE, &evs->read_fd_set, NULL, NULL, NULL) < 0)
+        return 0;
+
     return FD_SETSIZE;
 }
 
-int __socket_set_get_active_fd(int i)
+int __socket_set_get_active_fd(void *p, int i)
 {
-    if (FD_ISSET(i, &read_fd_set))
+    struct sock_events *evs = (struct sock_events *)p;
+    if (!evs)
+        return -1;
+
+    if (FD_ISSET(i, &evs->read_fd_set))
         return i;
     return -1;
 }
 
 #endif
-

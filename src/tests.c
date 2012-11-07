@@ -88,13 +88,10 @@ int main(int argc, char **argv)
     events_stop();
 #endif
 
-    socket_t *sock = socket_create();
+    //socket_t *sock = socket_create();
     connection_t *conn = malloc(sizeof(connection_t));
     conn->on_connect=on_connect;
-    if (!socket_connect(conn, sock, "irc.freenode.net", "6667"))
-        fatal("failed!\n");
-    //sock->on_accept = on_accept;
-    socket_poll(sock);
+    socket_connect(conn, "irc.freenode.net", "6667");
     return 0;
 }
 

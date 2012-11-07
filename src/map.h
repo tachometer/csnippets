@@ -30,7 +30,7 @@ struct map {
 #define PAIR_KEY(pair) (pair)->key
 #define PAIR_VALUE(pair, cast) (cast)(pair)->value
 
-extern void map_init(struct map *map);
+extern void map_new(struct map *map);
 extern void map_free(struct map *map);
 
 extern struct pair *map_get(const struct map *map, const char *key);

@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2012  asamy <f.fallen45@gmail.com>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -19,31 +19,53 @@
 #define MAX_EVENTS 1024
 #include <sys/epoll.h>
 
-static struct epoll_event *m_events;
-static int epoll_fd;
+struct sock_events {
+    struct epoll_event *events;
+    int epoll_fd;
+};
 
-void __socket_set_init(int fd)
+void *__socket_set_init(int fd)
 {
-    epoll_fd = epoll_create1(0);
-    if (epoll_fd == -1)
-        log_errno("failed to create epoll fd");
+    struct sock_events *ev = malloc(sizeof(struct sock_events));
+    if (!ev)
+        return NULL;
 
-    m_events = calloc(MAX_EVENTS, sizeof(struct epoll_event));
+    ev->epoll_fd = epoll_create1(0);
+    if (ev->epoll_fd == -1) {
+        perror("epoll_create1");
+        abort();
+    }
+
+    ev->events = calloc(MAX_EVENTS, sizeof(struct epoll_event));
+    if (!ev->events) {
+        perror("calloc");
+        abort();
+    }
+
+    return ev;
 }
 
-void __socket_set_deinit(void)
+void __socket_set_deinit(void *p)
 {
-    free(m_events);
+    struct sock_events *evs = (struct sock_events *)p;
+    if (!evs)
+        return;
+    free(evs->events);
+    free(evs);
 }
 
-void __socket_set_add(int fd)
+void __socket_set_add(void *p, int fd)
 {
+    struct sock_events *evs = (struct sock_events *)p;
+    if (!evs)
+        return;
+
     struct epoll_event ev = {
         .data.fd = fd,
         .events = EPOLLIN | EPOLLET
     };
 
-    if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, fd, &ev) == -1)
+    if (epoll_ctl(evs->epoll_fd, EPOLL_CTL_ADD, fd, &ev) == -1)
         perror("epoll_ctl failed");
 }
 
@@ -52,20 +74,27 @@ void __socket_set_del(int fd)
     /* nothing... */
 }
 
-int __socket_set_poll(int fd)
+int __socket_set_poll(void *p)
 {
-    return epoll_wait(epoll_fd, m_events, MAX_EVENTS, -1);  
+    struct sock_events *evs = (struct sock_events *)p;
+    if (!evs)
+        return;
+    return epoll_wait(evs->epoll_fd, evs->events, MAX_EVENTS, -1);
 }
 
-int __socket_set_get_active_fd(int i)
+int __socket_set_get_active_fd(void *p, int i)
 {
-    if (m_events[i].events & EPOLLERR ||
-            m_events[i].events & EPOLLHUP ||
-            !(m_events[i].events & EPOLLIN)) {
-        close(m_events[i].data.fd);
+    uint32_t events;
+    struct sock_events *evs = (struct sock_events *)p;
+    if (!evs)
+        return -1;
+
+    events = evs->events[i].events;
+    if (events & EPOLLERR || events & EPOLLHUP || !(events & EPOLLIN)) {
+        close(evs->events[i].data.fd);
         return -1;
     }
-    return m_events[i].data.fd;
+    return evs->events[i].data.fd;
 }
 
 #endif
