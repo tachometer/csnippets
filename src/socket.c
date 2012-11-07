@@ -162,7 +162,7 @@ socket_t *socket_create(void)
     return ret;
 }
 
-bool socket_connect(connection_t *conn, const char *addr, const char *service)
+void socket_connect(connection_t *conn, const char *addr, const char *service)
 {
     struct addrinfo *address;
     void *sock_events;
@@ -195,7 +195,7 @@ bool socket_connect(connection_t *conn, const char *addr, const char *service)
     }
 }
 
-bool socket_listen(socket_t *sock, const char *address, int32_t port, long max_conns)
+void socket_listen(socket_t *sock, const char *address, int32_t port, long max_conns)
 {
     struct sockaddr_in srv;
     int reuse_addr = 1;

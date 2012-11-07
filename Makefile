@@ -12,7 +12,7 @@ endif
 DEFINES     = -D_GNU_SOURCE -D__debug_list -D__debug_events -D__debug_socket
 INCLUDE_DIR = src
 CFLAGS      = ${DEBUG_FLAGS} -I${INCLUDE_DIR} -Wall -Wno-unused-parameter \
-	      -Wno-sign-compare -Wextra -Wfatal-errors -Wno-return-type ${DEFINES}
+	      -Wno-sign-compare -Wextra -Wfatal-errors  ${DEFINES}
 LIBS        = -lpthread
 LDFLAGS     = ${LIBS}
 

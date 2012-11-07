@@ -50,8 +50,6 @@ struct connection {
 /**
  * Create socket with a NULL connection.
  *
- * To create the initial connection, call socket_connect() or
- * socket_listen() on the socket.
  *
  * @return a malloc'd socket or NULL on failure.
  */
@@ -61,20 +59,17 @@ extern socket_t *socket_create(void);
  * Free socket and all of it's connections if any.
  *
  * @param socket a socket returned by socket_create().
- * @return nothing.
  */
 extern void socket_free(socket_t *socket);
 
 /**
  * socket_connect() - connect to a server.
  * @param conn a malloc'd connection that has atleast the on_connect callback setup.
- * @param socket the socket that was created by socket_create()
  * @param addr the address the server is listening on.
  * @param service port or a register service.
  *
- * @return true on success, false otherwise.
  */
-extern bool socket_connect(connection_t *conn, const char *addr, const char *service);
+extern void socket_connect(connection_t *conn, const char *addr, const char *service);
 
 /**
  * Listen on socket.
@@ -82,8 +77,7 @@ extern bool socket_connect(connection_t *conn, const char *addr, const char *ser
  * @param address can be NULL if indepdent.
  * @param port port to listen on.
  *
- * @return true on success, false otherwise.
  */
-extern bool socket_listen(socket_t *socket, const char *address, int32_t port, long max_conns);
+extern void socket_listen(socket_t *socket, const char *address, int32_t port, long max_conns);
 
 #endif    /* __socket_h */
