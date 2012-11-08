@@ -6,6 +6,7 @@
 #include "config.h"
 #include "socket.h"
 #include "strmisc.h"
+#include "darray.h"
 
 #include <time.h>
 #include <stdio.h>
@@ -44,19 +45,19 @@ static void *config_parse_event(void *filename)
     }
 }
 
-void on_read(connection_t *s, const char *buffer, int len)
+static void on_read(connection_t *s, const char *buffer, int len)
 {
     printf("[%d]: %s", s->fd, buffer);
 }
 
-void on_disconnect(connection_t *s)
+static void on_disconnect(connection_t *s)
 {
     printf("%s disconnected\n", s->ip);
     close(s->fd);
     xfree(s);
 }
 
-void on_connect(connection_t *s)
+static void on_connect(connection_t *s)
 {
     s->on_read = on_read;
     s->on_disconnect = on_disconnect;
@@ -64,10 +65,15 @@ void on_connect(connection_t *s)
     socket_write(s, "hi %s\n", s->ip);
 }
 
-void on_accept(socket_t *s, connection_t *n)
+static void on_accept(socket_t *s, connection_t *n)
 {
     n->on_connect = on_connect;
     printf("Accepted connection from %s\n", n->ip);
+}
+
+static bool darray_compare_string(const char *s1, const char *s2)
+{
+    return s1 && !strcmp(s1, s2);
 }
 
 int main(int argc, char **argv)
@@ -76,13 +82,31 @@ int main(int argc, char **argv)
     log_init();
 
     printf("running tests...\n");
+
     if (argc > 1) {
         char *str = str_convert(argv[1], toupper);
+        struct darray on_stack;
         if (!str)
             return 1;
         printf("%s converted -> %s\n", argv[1], str);
         assert(str_cmp(str, isupper));
-        free(str);
+
+        darray_init(&on_stack, sizeof(char *), 5);
+        darray_put(&on_stack, str, NULL);
+        int i;
+        for (i = 0; i < 10; i++) {
+            char *p;
+            if (asprintf(&p, "%d", i) < 0)
+                return 1;
+            darray_put(&on_stack, p, NULL);
+        }
+
+        for (i = 0; i < 10; i++) {
+            printf("on_stack.ptr[%d]: %s\n",i, on_stack.ptr[i]);
+            darray_remove(&on_stack, on_stack.ptr[i], darray_compare_string, NULL);
+        }
+
+        darray_free(&on_stack, NULL);
     }
 
     char *s;
