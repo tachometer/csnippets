@@ -72,6 +72,7 @@ static void poll_on_client(connection_t *conn, void *sock_events)
     }
 
     if (done && conn) {
+        __socket_set_del(sock_events, conn->fd);
         list_del(&conn->node);
         if (conn->on_disconnect)
             conn->on_disconnect(conn);
@@ -212,11 +213,10 @@ void socket_listen(socket_t *sock, const char *address, int32_t port, long max_c
     if (!sock)
         return;
 
-    if (sock->fd < 0) {
+    if (sock->fd < 0)
         sock->fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-        if (sock->fd < 0)
-            return;
-    }
+    if (sock->fd < 0)
+        return;
 
     if (!set_nonblock(sock->fd, true))
         return;
@@ -252,7 +252,9 @@ int socket_write(connection_t *conn, const char *fmt, ...)
     if (!data)
         return ENOMEM;
 
-    err = send(conn->fd, data, len, 0);
+    do
+        err = send(conn->fd, data, len, 0);
+    while (err == -1 && ERRNO == EINTR);
     if (err < 0) {
         err = ERRNO;
         goto out;
@@ -275,10 +277,8 @@ void socket_free(socket_t *socket)
     for (;;) {
         conn = list_top(&socket->conn->children, connection_t,
                         node);
-        if (!conn) {
-            /* We're done.  */
+        if (!conn)
             break;
-        }
 
         if (conn->fd)
             close(conn->fd);

@@ -1,0 +1,12 @@
+## A config sample
+test {
+    something = "hello"
+    anotherthing = "world"
+}
+
+## tests that would fail:
+## whatever {
+##     value_without_a_key
+##     ...
+##}
+

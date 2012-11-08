@@ -5,11 +5,13 @@
 #include "event.h"
 #include "config.h"
 #include "socket.h"
+#include "strmisc.h"
 
 #include <time.h>
 #include <stdio.h>
 #include <assert.h>
 #include <unistd.h>
+#include <ctype.h>
 
 char *prog;
 
@@ -42,6 +44,7 @@ void on_read(connection_t *s, const char *buffer, int len)
 void on_disconnect(connection_t *s)
 {
     printf("%s disconnected\n", s->ip);
+    close(s->fd);
     xfree(s);
 }
 
@@ -63,10 +66,20 @@ int main(int argc, char **argv)
 {
     prog = argv[0];
     log_init();
-#if 0
+
+    printf("running tests...\n");
+    if (argc > 1) {
+        char *str = str_convert(argv[1], toupper);
+        if (!str)
+            return 1;
+        printf("%s converted -> %s\n", argv[1], str);
+        assert(str_cmp(str, isupper));
+        free(str);
+    }
+
     char *s;
     struct map map = MAP_INIT;
-    map_init(&map);
+    map_new(&map);
     if (asprintf(&s, "%d %s", argc, prog) < 0)
         fatal("asprintf() failed: %d %s\n", argc, prog);
 
@@ -79,13 +92,13 @@ int main(int argc, char **argv)
     assert(map_remove(&map, "hello"));
     assert(!map_has(&map, "hello"));
     print("map count: %d\n", map_get_count(&map));
+    map_free(&map);
 
     events_init();
     event_add(1, test, (void *)1);
     event_add(2, test, (void *)2);
     event_add(2, config_parse_event, (void *)"config_test");
     events_stop();
-#endif
 
     if (argc > 2) {
         connection_t *conn = malloc(sizeof(connection_t));
@@ -98,6 +111,7 @@ int main(int argc, char **argv)
         sock->on_accept = on_accept;
         socket_listen(sock, NULL, 1337, 10);
     }
+
     return 0;
 }
 

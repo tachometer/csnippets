@@ -3,7 +3,9 @@
 #endif
 
 #define __pre_h
+#ifndef __cplusplus
 #include <stdbool.h>
+#endif
 #include <stdint.h>
 #include <stddef.h>
 #include <assert.h>
@@ -21,11 +23,11 @@
  * const char *my_array[] = { ... };
  * int count = countof(my_array);
  */
-#define countof(array) (sizeof(array) / sizeof((array)[0])
+#define countof(array) (sizeof((array)) / sizeof((array)[0]))
 /*
  * some helpers for easy memory management.
  */
-#define xfree(p) do { free(p); p = NULL; } while (0)
+#define xfree(p) do { if (p) free(p); p = NULL; } while (0)
 #define __fail(s) do { warning("failed to allocate %zd bytes\n", s); } while(0)
 #define xmalloc(p, s, action) do {  \
     p = malloc(s); \

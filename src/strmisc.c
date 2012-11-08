@@ -61,10 +61,39 @@ int strwildmatch(const char *pattern, const char *string) {
     }
 }
 
-bool strupper(char *str) {
-    while (*str)
-        if (isupper(*str++))
+bool str_cmp(const char *str, int (*cmp_func) (int))
+{
+    char *p = (char *)str;
+    if (!str || *str == '\0')
+        return false;
+    if (!cmp_func)
+        return false;
+    while (*p)
+        /*
+         * compare every single character in this string
+         * if one fails, then the whole comparison fails...
+         */
+        if (!cmp_func((int)*p++))
             return false;
     return true;
+}
+
+char *str_convert(const char *str, int (*convert_func) (int))
+{
+    char *p;
+    int len, i;
+
+    if (!convert_func)
+        return NULL;
+    len = strlen(str);
+    if (len < 0)
+        return NULL;
+    p = malloc(len + 1);
+    if (!p)
+        return NULL;
+    for (i = 0; i < len; i++)
+        p[i] = convert_func((int)str[i]);
+    p[i + 1]  = '\0';
+    return p;
 }
 

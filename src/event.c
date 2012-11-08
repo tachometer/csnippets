@@ -28,12 +28,25 @@ static bool            running;
 static pthread_t       self;
 static LIST_HEAD(g_events);
 
+static bool convert_time(struct timespec *ts, int delay)
+{
+    struct timeval tv;
+
+    if (delay < 0)
+        return false;
+
+    gettimeofday(&tv, NULL);
+    ts->tv_sec  = tv.tv_sec;
+    ts->tv_nsec = tv.tv_usec * 1000;
+    ts->tv_sec += delay;
+
+    return true;
+}
+
 static void *events_thread(void *d)
 {
     struct event_t *event = NULL;
     struct timespec ts;
-    struct timeval  tv;
-
 #ifdef __debug_events
     log("Events thread start\n");
 #endif
@@ -47,23 +60,17 @@ static void *events_thread(void *d)
         if (!event)
             continue;
 
-        if (event->delay > 0) {
-            gettimeofday(&tv, NULL);
-            ts.tv_sec  = tv.tv_sec;
-            ts.tv_nsec = tv.tv_usec * 1000;
-            ts.tv_sec += event->delay;
-
+        if (convert_time(&ts, event->delay))
             pthread_cond_timedwait(&cond, &mutex, &ts);
-        }
 
         pthread_mutex_unlock(&mutex);
         (*event->start_routine) (event->param);
-        xfree(event);
+        free(event);
     }
 
     /*
      * the thread was stopped by setting "running" to false...
-     * but before we exit, run any events waiting on the list.
+     * but before we exit, fire any events waiting on the list.
      */
 #ifdef __debug_events
     print("Executing all of the remaining events...\n");
@@ -73,18 +80,12 @@ static void *events_thread(void *d)
         if (!event)
             break;
 
-        if (event->delay > 0) {
-            gettimeofday(&tv, NULL);
-            ts.tv_sec  = tv.tv_sec;
-            ts.tv_nsec = tv.tv_usec * 1000;
-            ts.tv_sec += event->delay;
-
+        if (convert_time(&ts, event->delay))
             pthread_cond_timedwait(&cond, &mutex, &ts);
-        }
 
         (*event->start_routine) (event->param);
         list_del(&event->children);
-        xfree(event);
+        free(event);
     }
 #ifdef __debug_events
     print("done\n");
@@ -130,7 +131,6 @@ void event_add(int32_t delay, event_start_routine start, void *p)
         return;
 
     xmalloc(event, sizeof(struct event_t), return);
-
     event->delay = delay;
     event->start_routine = start;
     event->param = p;

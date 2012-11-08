@@ -3,7 +3,7 @@
 
 #include <stdarg.h>
 
-static const char *type_strings[] = { "FATAL", "WARNING", "NOTICE", NULL };
+static const char *type_strings[] = { "fatal error", "warning", "notice", NULL };
 extern char *prog;
 
 #define __log(s, args...)  \
@@ -47,6 +47,7 @@ void error(int error_type, const char *str, ...)
     (void) vasprintf(&buff, str, va);
     va_end(va);
 
+    assert((error_type == -1 || error_type < countof(type_strings)));
     if (error_type == LOG_NULL) {       /* special type for logging */    
         __log("%s: %s", prog, buff);
     } else {
