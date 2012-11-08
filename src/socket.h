@@ -50,7 +50,6 @@ struct connection {
 /**
  * Create socket with a NULL connection.
  *
- *
  * @return a malloc'd socket or NULL on failure.
  */
 extern socket_t *socket_create(void);

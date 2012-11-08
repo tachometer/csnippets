@@ -15,11 +15,6 @@
 
 char *prog;
 
-static void *test(void *a)
-{
-    print("test(): %d\n", (int)a);
-}
-
 static void *config_parse_event(void *filename)
 {
     struct centry_t *c, *p = NULL;
@@ -29,10 +24,23 @@ static void *config_parse_event(void *filename)
     if (!c)
         fatal("failed to load config!");
 
-    list_for_each(&c->children, p, node) {
+    for (;;) {
+        p = list_top(&c->children, struct centry_t, node);
+        if (!p)
+            break;
+
         print("Section %s\n", p->section);
-        list_for_each(&p->def->def_children, def, node)
+        for (;;) {
+            def = list_top(&c->def->def_children, struct cdef_t, node);
+            if (!def)
+                break;
+
             print("Key [%s] -> Value [%s]\n", def->key, def->value);
+            list_del(&def->node);
+            free(def);
+        }
+        list_del(&p->node);
+        free(p);
     }
 }
 
@@ -82,6 +90,7 @@ int main(int argc, char **argv)
     map_new(&map);
     if (asprintf(&s, "%d %s", argc, prog) < 0)
         fatal("asprintf() failed: %d %s\n", argc, prog);
+    free(s);
 
     print("map count: %d\n", map_get_count(&map));
     struct pair *pair = map_put(&map, "hello", (void *)"world");
@@ -95,8 +104,6 @@ int main(int argc, char **argv)
     map_free(&map);
 
     events_init();
-    event_add(1, test, (void *)1);
-    event_add(2, test, (void *)2);
     event_add(2, config_parse_event, (void *)"config_test");
     events_stop();
 
