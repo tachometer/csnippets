@@ -1,4 +1,5 @@
-/* Licensed under BSD-MIT - see LICENSE file for details */
+/* This code is borrowed from ccan (https://github.com/rustyrussell/ccan)
+ * Licensed BSD-MIT - see their LICENSE file for details */
 #ifndef CCAN_NET_H
 #define CCAN_NET_H
 

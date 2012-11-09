@@ -160,6 +160,7 @@ socket_t *socket_create(void)
     WSAData wsa;
     if (!initialized) {
         if (!WSAStartup(MAKEWORD(2,2) &wsa)) {
+            WSACleanup();
             fprintf(stderr, "WSAStartup() failed\n");
             abort();
         }

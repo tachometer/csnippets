@@ -1,7 +1,5 @@
-/* This header is borrowed from The C Code Archive Network, See also:
- * https://github.com/rustyrussell/ccan/
- * Licensed under BSD-MIT - see LICENSE file for details
- */
+/* This code is borrowed from ccan (https://github.com/rustyrussell/ccan)
+ * Licensed BSD-MIT - see their LICENSE file for details */
 #ifndef __list_h
 #define __list_h
 

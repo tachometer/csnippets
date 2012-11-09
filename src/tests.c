@@ -166,7 +166,9 @@ int main(int argc, char **argv)
                     "                           stack_test -> task_test -> network_test\n",
                     stdout);
             return 0;
-        }
+        } else
+            die("unknown option %s.  run %s --help for more information\n",
+                    *argv, prog);
     }
 
     return 0;

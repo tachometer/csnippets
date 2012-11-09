@@ -19,14 +19,14 @@
 
 struct stack {
     void **ptr;  /* the internel array */
-    int mem;     /* the sizeof(actual_pointer) */
+    size_t mem;     /* the sizeof(actual_pointer) */
     size_t size;
 };
 
 #define DEFAULT_SIZE 10
 #define SIZE_INCREMENT 2
 
-static inline bool stack_init(struct stack *s, int mem, size_t size)
+static inline bool stack_init(struct stack *s, size_t mem, size_t size)
 {
     if (!size)
         size = DEFAULT_SIZE;
@@ -49,7 +49,7 @@ static inline void stack_free(struct stack *s, void (*destructor) (void *))
             (*destructor) (s->ptr[i]);
     free(s->ptr);
     /** XXX it may be a bad idea to do this, but just incase
-     * the user may want to use the array on something else. */
+     * the user wants to use the array on something else. */
     s->size = 0;
     s->mem = 0;
 }
