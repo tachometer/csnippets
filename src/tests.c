@@ -45,6 +45,16 @@ static void config_parse_event(void *filename)
     }
 }
 
+void test(void *p)
+{
+    printf("test()\n");
+}
+
+static bool stack_compare_string(const char *s1, const char *s2)
+{
+    return s1 && !strcmp(s1, s2);
+}
+
 static void on_read(connection_t *s, const char *buffer, int len)
 {
     printf("[%d]: %s", s->fd, buffer);
@@ -71,49 +81,28 @@ static void on_accept(socket_t *s, connection_t *n)
     printf("Accepted connection from %s\n", n->ip);
 }
 
-static bool stack_compare_string(const char *s1, const char *s2)
+static void run_networking_test(bool server)
 {
-    return s1 && !strcmp(s1, s2);
-}
+    if (!server) {
+        connection_t *conn = malloc(sizeof(connection_t));
+        if (!conn)
+            return;
 
-void test(void *p)
-{
-    printf("test()\n");
-}
-
-int main(int argc, char **argv)
-{
-    prog = argv[0];
-    log_init();
-
-    printf("running tests...\n");
-    if (argc > 1) {
-        char *str = str_convert(argv[1], toupper);
-        struct stack on_stack;
-        if (!str)
-            return 1;
-        printf("%s converted -> %s\n", argv[1], str);
-        assert(str_cmp(str, isupper));
-
-        stack_init(&on_stack, sizeof(char *), 5);
-        stack_push(&on_stack, str, NULL);
-        int i;
-        for (i = 0; i < 10; i++) {
-            char *p;
-            if (asprintf(&p, "%d", i) < 0)
-                return 1;
-            stack_push(&on_stack, p, NULL);
-        }
-
-        for (i = 0; i < 10; i++) {
-            printf("on_stack.ptr[%d]: %s\n",i, (char *)on_stack.ptr[i]);
-            stack_remove(&on_stack, on_stack.ptr[i], stack_compare_string, NULL,
-                    false);
-        }
-
-        stack_free(&on_stack, NULL);
+        conn->on_connect = on_connect;
+        printf("connecting to freenode\n");
+        socket_connect(conn, "irc.freenode.net", "6667");
+    } else {
+        socket_t *sock = socket_create();
+        if (!sock)
+            return;
+        sock->on_accept = on_accept;
+        printf("Server will bind to port 1337.\n");
+        socket_listen(sock, NULL, 1337, 10);
     }
+}
 
+static void run_task_test(void)
+{
     tasks_init();
     events_init();
     sleep(2);    /* wait for both threads to run */
@@ -126,20 +115,58 @@ int main(int argc, char **argv)
     events_add(event_create(3, test, NULL));
     events_stop();
     tasks_stop();
+}
 
-    if (argc > 2) {
-        connection_t *conn = malloc(sizeof(connection_t));
-        if (!conn)
-            return 1;
+static void run_stack_test(void)
+{
+    struct stack on_stack;
+    int i;
 
-        conn->on_connect = on_connect;
-        socket_connect(conn, argv[1], argv[2]);
-    } else {
-        socket_t *sock = socket_create();
-        if (!sock)
-            return 1;
-        sock->on_accept = on_accept;
-        socket_listen(sock, NULL, 1337, 10);
+    stack_init(&on_stack, sizeof(char *), 5);
+    for (i = 0; i < 10; i++) {
+        char *p;
+        if (asprintf(&p, "%d", i) < 0)
+            return;
+        stack_push(&on_stack, p, NULL);
+    }
+
+    for (i = 0; i < 10; i++) {
+        printf("on_stack.ptr[%d]: %s\n",i, (char *)on_stack.ptr[i]);
+        stack_remove(&on_stack, on_stack.ptr[i], stack_compare_string, NULL,
+            false);
+    }
+
+    stack_free(&on_stack, NULL);
+}
+
+int main(int argc, char **argv)
+{
+    prog = argv[0];
+    log_init();
+
+    for (argv++; *argv; argv++) {
+        if (!strcmp(*argv, "--run-network-test"))
+            run_networking_test(*++argv ? true : false);
+        else if (!strcmp(*argv, "--run-task-test"))
+            run_task_test();
+        else if (!strcmp(*argv, "--run-stack-test"))
+            run_stack_test();
+        else if (!strcmp(*argv, "--run-all-tests")) {
+            run_stack_test();
+            run_task_test();
+            run_networking_test(true);
+        } else if (!strcmp(*argv, "--help")) {
+            fputs("--run-network-test      if an argument was passed, a server will be bind otherwise connect to freenode.\n",
+                    stdout);
+            fputs("--run-task-test         takes no arguments, runs few tasks that has a time frame.\n",
+                    stdout);
+            fputs("--run-stack-test        takse no arguments, pushes few items to a stack\n",
+                    stdout);
+            fputs("--run-all-tests         run all of the previous tests in the following order:\n"
+                    "                           stack_test -> task_test -> network_test\n",
+                    stdout);
+            return 0;
+        }
     }
 
     return 0;
