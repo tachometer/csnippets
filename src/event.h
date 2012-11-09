@@ -17,23 +17,21 @@
 #ifndef __event_h
 #define __event_h
 
-#include "list.h"
+#include "task.h"
 
 __begin_header
 
-typedef void *(*event_start_routine) (void *);
-
-struct event_t {
+typedef struct {
     int32_t delay;
-    event_start_routine start_routine;
-    void *param;
-    struct list_node children;
-};
+    task_t *task;
+    struct list_node node;
+} event_t;
 
 extern void events_init(void);
 extern void events_stop(void);
+extern void events_add(event_t *event);
 
-extern void event_add(int32_t delay, event_start_routine start, void *p);
+extern event_t *event_create(int delay, task_routine start, void *p);
 
 __end_header
 #endif  /* __event_h */

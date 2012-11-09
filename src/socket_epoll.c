@@ -78,7 +78,7 @@ int __socket_set_poll(void *p)
 {
     struct sock_events *evs = (struct sock_events *)p;
     if (!evs)
-        return;
+        return 0;
     return epoll_wait(evs->epoll_fd, evs->events, MAX_EVENTS, -1);
 }
 

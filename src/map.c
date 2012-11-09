@@ -1,3 +1,20 @@
+/*
+ * Copyright (c) 2009, 2011 Per Ola Kristensson <pok21@cam.ac.uk>.
+ * Copyright (c) 2012 asamy <f.fallen45@gmail.com>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 #include "map.h"
 #include "strmisc.h"
 
@@ -55,7 +72,7 @@ void map_free(struct map *map)
     struct bucket *bucket;
     struct pair *pair;
 
-    if (map == NULL)
+    if (!map)
         return;
 
     n = map->count;
@@ -65,17 +82,17 @@ void map_free(struct map *map)
 
     for (i = 0; i < n; i++, bucket++) {
         if (unlikely(!bucket))
-            return;
+            break;
 
         m = bucket->count;
         pair = bucket->pairs;
 
         for (j = 0; j < m; j++, pair++)
-            xfree(pair->key);
+            free(pair->key);
 
-        xfree(bucket->pairs);
+        free(bucket->pairs);
     }
-    xfree(map->buckets);
+    free(map->buckets);
 }
 
 struct pair *map_get(const struct map *map, const char *key)
@@ -96,7 +113,7 @@ bool map_remove(const struct map *map, const char *key)
     if (unlikely(!pair))
         return false;
 
-    xfree(pair->key);
+    free(pair->key);
     return true; 
 }
 
@@ -129,14 +146,16 @@ struct pair *map_put(const struct map *map, const char *key, void* value)
         bucket->count++;
     }
 
-    pair = &bucket->pairs[bucket->count - 1];
-    pair->key = new_key;
+    if (!pair) {
+        pair = &bucket->pairs[bucket->count - 1];
+        pair->key = new_key;
+    }
     pair->value = value;
 
     strcpy(pair->key, key);
     return pair;
 out:
-    xfree(new_key);
+    free(new_key);
     return NULL;
 }
 

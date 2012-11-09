@@ -245,7 +245,7 @@ int socket_write(connection_t *conn, const char *fmt, ...)
     if (!conn || conn->fd < 0)
         return EINVAL;
 
-    va_start(va, data);
+    va_start(va, fmt);
     len = vasprintf(&data, fmt, va);
     va_end(va);
 

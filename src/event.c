@@ -24,72 +24,53 @@
 
 static pthread_mutex_t mutex        = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t  cond         = PTHREAD_COND_INITIALIZER;
-static bool            running;
+static bool            running = false;
 static pthread_t       self;
-static LIST_HEAD(g_events);
-
-static bool convert_time(struct timespec *ts, int delay)
-{
-    struct timeval tv;
-
-    if (delay < 0)
-        return false;
-
-    gettimeofday(&tv, NULL);
-    ts->tv_sec  = tv.tv_sec;
-    ts->tv_nsec = tv.tv_usec * 1000;
-    ts->tv_sec += delay;
-
-    return true;
-}
+static LIST_HEAD(events);
 
 static void *events_thread(void *d)
 {
-    struct event_t *event = NULL;
+    event_t *event = NULL;
     struct timespec ts;
-#ifdef __debug_events
-    log("Events thread start\n");
-#endif
+    struct timeval tv;
+
     while (running) {
         pthread_mutex_lock(&mutex);
-        if (list_empty(&g_events))
+        if (list_empty(&events)) {
             pthread_cond_wait(&cond, &mutex);
+            if (!running)
+                break;
+        } else {
+            event = list_top(&events, event_t, node);
+            list_del(&event->node);
 
-        event = list_top(&g_events, struct event_t, children);
-        list_del(&event->children);
+            gettimeofday(&tv, NULL);
+            ts.tv_sec  = tv.tv_sec;
+            ts.tv_nsec = tv.tv_usec * 1000;
+            ts.tv_sec += event->delay;
+
+            pthread_cond_timedwait(&cond, &mutex, &ts);
+        }
+        pthread_mutex_unlock(&mutex);
+
         if (!event)
             continue;
 
-        if (convert_time(&ts, event->delay))
-            pthread_cond_timedwait(&cond, &mutex, &ts);
-
-        pthread_mutex_unlock(&mutex);
-        (*event->start_routine) (event->param);
+        tasks_add(event->task);
         free(event);
     }
 
-    /*
-     * the thread was stopped by setting "running" to false...
-     * but before we exit, fire any events waiting on the list.
-     */
-#ifdef __debug_events
-    print("Executing all of the remaining events...\n");
-#endif
-    for (;;) {
-        event = list_top(&g_events, struct event_t, children);
+    /* if we have any remaining events, add them to tasks  */
+    while (!list_empty(&events)) {
+        event = list_top(&events, event_t, node);
         if (!event)
             break;
+        list_del(&event->node);
 
-        if (convert_time(&ts, event->delay))
-            pthread_cond_timedwait(&cond, &mutex, &ts);
-
-        (*event->start_routine) (event->param);
-        list_del(&event->children);
+        tasks_add(event->task);
         free(event);
     }
-#ifdef __debug_events
-    print("done\n");
-#endif
+    return NULL;
 }
 
 void events_init(void)
@@ -113,33 +94,48 @@ void events_init(void)
 
 void events_stop(void)
 {
-#ifdef __debug_events
-    log("Stopping events thread\n");
-#endif
+    pthread_mutex_lock(&mutex);
     running = false;
+    pthread_cond_signal(&cond);
+    pthread_mutex_unlock(&mutex);
 
     pthread_join(self, NULL);
     pthread_mutex_destroy(&mutex);
     pthread_cond_destroy(&cond);
 }
 
-void event_add(int32_t delay, event_start_routine start, void *p)
+event_t *event_create(int delay, task_routine start, void *p)
 {
-    struct event_t *event;
-    bool empty = list_empty(&g_events);
-    if (!start)
-        return;
-
-    xmalloc(event, sizeof(struct event_t), return);
+    event_t *event;
+    if (!start || delay < 0)
+        return NULL;
+    event = malloc(sizeof(event_t));
+    if (!event)
+        return NULL;
     event->delay = delay;
-    event->start_routine = start;
-    event->param = p;
+    event->task = task_create(start, p);
+    if (!event->task) {
+        free(event);
+        return NULL;
+    }
+    return event;
+}
 
+void events_add(event_t *event)
+{
+    bool empty = false;
+
+    if (!event)
+        return;
     pthread_mutex_lock(&mutex);
-    list_add(&g_events, &event->children);
+    if (running) {
+        empty = list_empty(&events);
+        list_add(&events, &event->node);
+    } else
+        printf("attempting to add an event to a terminated event queue\n");
 
+    pthread_mutex_unlock(&mutex);
     if (empty)
         pthread_cond_signal(&cond);
-    pthread_mutex_unlock(&mutex);
 }
 

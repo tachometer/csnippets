@@ -6,9 +6,10 @@
 static const char *type_strings[] = { "fatal error", "warning", "notice", NULL };
 extern char *prog;
 
-#define __log(s, args...)  \
+#define __log(s, args...) do { \
     fprintf(stderr, s, ##args); /* freopen specific (stderr) */ \
-    fprintf(stdout, s, ##args); /* on console */
+    fprintf(stdout, s, ##args); /* on console */ \
+} while (0)
 
 void __noreturn error_nret(const char *str, ...)
 {
@@ -48,10 +49,9 @@ void error(int error_type, const char *str, ...)
     va_end(va);
 
     assert((error_type == -1 || error_type < countof(type_strings)));
-    if (error_type == LOG_NULL) {       /* special type for logging */    
+    if (error_type == LOG_NULL) /* special type for logging */
         __log("%s: %s", prog, buff);
-    } else {
+    else
         __log("%s: %s: %s", prog, type_strings[error_type], buff);
-    }
 }
 
