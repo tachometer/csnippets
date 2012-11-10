@@ -1,4 +1,3 @@
-#include "pre.h"
 #include "config.h"
 #include "asprintf.h"
 #include "map.h"
@@ -127,7 +126,7 @@ static void run_stack_test(void)
         char *p;
         if (asprintf(&p, "%d", i) < 0)
             return;
-        stack_push(&on_stack, p, NULL);
+        stack_push(&on_stack, p, -1, NULL);
     }
 
     for (i = 0; i < 10; i++) {

@@ -18,7 +18,7 @@
 #define __stack_h
 
 struct stack {
-    void **ptr;  /* the internel array */
+    void **ptr;     /* the internel array */
     size_t mem;     /* the sizeof(actual_pointer) */
     size_t size;
 };
@@ -43,6 +43,8 @@ static inline void stack_free(struct stack *s, void (*destructor) (void *))
     int i;
 
     for (i = 0; i < s->size; i++)
+        if (!s->ptr[i])
+            continue;
         if (unlikely(!destructor))
             free(s->ptr[i]);
         else
@@ -54,22 +56,26 @@ static inline void stack_free(struct stack *s, void (*destructor) (void *))
     s->mem = 0;
 }
 
-static inline int stack_push(struct stack *s, void *ptr, void (*constructor) (void *))
+static inline int stack_push(struct stack *s, void *ptr, int where, void (*constructor) (void *))
 {
     void *tmp;
     int place;
 
-    /* Find the first empty place.  */
-    for (place = 0; place < s->size && s->ptr[place]; place++);
-    /* If there's no place, reallocate  */
-    if (place == s->size && s->ptr[place] != NULL) {
-        int new_size = s->size + SIZE_INCREMENT;
-        tmp = realloc(s->ptr, new_size * s->mem);
-        if (!tmp)
-            return -1;
-        s->ptr = tmp;
-        s->size = new_size;
-    }
+    /* If where is -1, find the place ourselves.  */
+    if (where == -1) {
+        /* Find the first empty place.  */
+        for (place = 0; place < s->size && s->ptr[place]; place++);
+        /* If there's no place, reallocate  */
+        if (place == s->size && s->ptr[place] != NULL) {
+            int new_size = s->size + SIZE_INCREMENT;
+            tmp = realloc(s->ptr, new_size * s->mem);
+            if (!tmp)
+                return -1;
+            s->ptr = tmp;
+            s->size = new_size;
+        }
+    } else
+        place = where;
 
     s->ptr[place] = ptr;
     if (likely(constructor))
@@ -77,7 +83,17 @@ static inline int stack_push(struct stack *s, void *ptr, void (*constructor) (vo
     return place;
 }
 
-static inline bool stack_remove(struct stack *s, void *ptr, bool (*compare_function) (void *, void *),
+static inline void *stack_pop(struct stack *s)
+{
+    return s ? s->ptr[--s->size] : NULL;
+}
+
+static inline void *stack_top(struct stack *s)
+{
+    return s ? s->ptr[s->size - 1] : NULL;
+}
+
+static inline bool stack_remove(struct stack *s, void *ptr, bool (*compare_function) (const void *, const void *),
         void (*destructor) (void *), bool duplicate)
 {
     int i;

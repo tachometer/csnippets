@@ -32,7 +32,6 @@ SRC     = socket_select.c socket_epoll.c socket.c strmisc.c map.c error.c config
 TEST    = tests
 OBJ_DIR = obj
 OBJ     = ${SRC:%.c=${OBJ_DIR}/%.o}
-PRE     = pre.h
 
 ifdef V
 define compile
@@ -41,7 +40,7 @@ endef
 else
 define compile
 	@echo Compiling $<
-	@$(CC) -c $(CFLAGS) $1 -o $@ $<
+	@$(CC) -c $(CFLAGS) -include ${SRC_DIR}/util.h -o $@ $<
 endef
 endif
 
@@ -71,9 +70,6 @@ install: ${BIN_DIR}/${BIN} ${SRC_DIR}/${SRC}
 uninstall: ${bindir}
 	${RM} ${bindir}/${BIN}
 
-${OBJ_DIR}/pre.h.gch: ${SRC_DIR}/${PRE}
-	${compile}
-
 ${LIB_DIR}/${LIB}: ${LIB_DIR} ${OBJ_DIR} ${OBJ}
 	${ar}
 
@@ -83,8 +79,8 @@ ${BIN_DIR}/${BIN}: ${LIB_DIR}/${LIB} ${OBJ_DIR}/${TEST}.o
 ${OBJ_DIR}/${TEST}.o: ${SRC_DIR}/${TEST}.c ${OBJ_DIR}
 	${compile}
 
-${OBJ_DIR}/%.o: ${SRC_DIR}/%.c ${OBJ_DIR}/${PRE}.gch
-	${call compile, -include $(PRE)}
+${OBJ_DIR}/%.o: ${SRC_DIR}/%.c
+	${compile}
 
 ${OBJ_DIR}:
 	@mkdir -p ${OBJ_DIR}
