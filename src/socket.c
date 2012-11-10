@@ -171,7 +171,7 @@ static int net_connect(const struct addrinfo *addrinfo)
             if (getsockopt(pfd[i].fd, SOL_SOCKET, SO_ERROR, &err, &errlen) != 0)
                 goto out;
             if (err == 0)
-            goto got_one;
+                goto got_one;
 
             /* Remove dead one. */
             errno = err;

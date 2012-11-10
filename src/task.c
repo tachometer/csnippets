@@ -20,7 +20,7 @@ static void *tasks_thread(void *p)
         if (!running)
             break;
 
-        if (running && !list_empty(&tasks)) {
+        if (!list_empty(&tasks)) {
             task = list_top(&tasks, task_t, node);
             list_del(&task->node);
         }

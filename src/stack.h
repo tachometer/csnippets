@@ -75,14 +75,14 @@ static inline int stack_push(struct stack *s, void *ptr, int where, void (*const
         /* Find the first empty place.  */
         for (place = 0; place < s->size && s->ptr[place]; place++);
         /* If there's no place, reallocate  */
-        if (place == s->size && s->ptr[place] != NULL) {
+        if (place == s->size - 1 && s->ptr[place] != NULL) {
             if (!stack_grow(s, s->size + SIZE_INCREMENT))
                 return -1;
         }
     } else {
         assert(place >= 0);
         if (place > s->size) {
-            if (!stack_grow(s, s->size + SIZE_INCREMENT))
+            if (!stack_grow(s, (place - s->size) + 1))
                 return -1;
         }
     }
