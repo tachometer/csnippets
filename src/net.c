@@ -2,16 +2,21 @@
  * Licensed BSD-MIT - see their LICENSE file for details */
 #include "net.h"
 
+#ifdef _WIN32
+#define poll WSAPoll
+#include <winsock2.h>
+#else
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <poll.h>
 #include <netdb.h>
+#include <netinet/in.h>
+#endif
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <errno.h>
-#include <netinet/in.h>
 
 struct addrinfo *net_client_lookup(const char *hostname,
 				   const char *service,

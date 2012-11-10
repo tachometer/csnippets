@@ -85,7 +85,7 @@
 #define ERRNO WSAGetLastError()
 #define set_last_error(e) SetLastError((e))
 #define E_BLOCK WSAEWOULDBLOCK
-#define E_AGAIN
+#define E_AGAIN EAGAIN
 #define E_ISCONN WSAEISCONN
 #define E_ALREADY WSAEALREADY
 #define E_INPROGRESS WSAEINPROGRESS

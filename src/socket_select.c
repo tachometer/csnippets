@@ -18,6 +18,10 @@
 
 #include "socket.h"
 
+#ifdef _WIN32
+#include <winsock2.h>
+#endif
+
 struct sock_events {
     fd_set active_fd_set, read_fd_set;
 };
