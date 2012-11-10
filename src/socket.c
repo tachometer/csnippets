@@ -1,6 +1,8 @@
 /*
  * Copyright (C) 2012  asamy <f.fallen45@gmail.com>
  *
+ * The first few static net functions are borrowed from ccan.
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -54,7 +56,7 @@ static bool is_initialized = false;
 static struct addrinfo *net_client_lookup(const char *hostname,
         const char *service,
         int family,
-	int socktype)
+        int socktype)
 {
     struct addrinfo hints;
     struct addrinfo *res;
@@ -66,7 +68,7 @@ static struct addrinfo *net_client_lookup(const char *hostname,
     hints.ai_protocol = 0;
 
     if (getaddrinfo(hostname, service, &hints, &res) != 0)
-	return NULL;
+        return NULL;
 
     return res;
 }
@@ -77,12 +79,12 @@ static bool set_nonblock(int fd, bool nonblock)
 #ifndef _WIN32
     flags = fcntl(fd, F_GETFL);
     if (flags == -1)
-	return false;
+        return false;
 
     if (nonblock)
-	flags |= O_NONBLOCK;
+        flags |= O_NONBLOCK;
     else
-	flags &= ~(long)O_NONBLOCK;
+        flags &= ~(long)O_NONBLOCK;
 
     return (fcntl(fd, F_SETFL, flags) == 0);
 #else
@@ -146,42 +148,41 @@ static int net_connect(const struct addrinfo *addrinfo)
     }
 
     for (i = 0; i < num; i++) {
-	if (!set_nonblock(pfd[i].fd, true)) {
-	    remove_fd(pfd, addr, slen, &num, i--);
-	    continue;
-	}
-	/* Connect *can* be instant. */
-	if (connect(pfd[i].fd, addr[i]->ai_addr, slen[i]) == 0)
-	    goto got_one;
+        if (!set_nonblock(pfd[i].fd, true)) {
+            remove_fd(pfd, addr, slen, &num, i--);
+            continue;
+        }
+        /* Connect *can* be instant. */
+        if (connect(pfd[i].fd, addr[i]->ai_addr, slen[i]) == 0)
+            goto got_one;
         if (ERRNO != E_INPROGRESS) {
-	    /* Remove dead one. */
-	    remove_fd(pfd, addr, slen, &num, i--);
-	}
-	pfd[i].events = POLLOUT;
+            /* Remove dead one. */
+            remove_fd(pfd, addr, slen, &num, i--);
+        }
+        pfd[i].events = POLLOUT;
     }
 
     while (num && poll(pfd, num, -1) != -1) {
-	for (i = 0; i < num; i++) {
+        for (i = 0; i < num; i++) {
 	    int err;
-	    socklen_t errlen = sizeof(err);
-	    if (!pfd[i].revents)
-		continue;
-	    if (getsockopt(pfd[i].fd, SOL_SOCKET, SO_ERROR, &err,
-				&errlen) != 0)
-		goto out;
-	    if (err == 0)
-		goto got_one;
+            socklen_t errlen = sizeof(err);
+            if (!pfd[i].revents)
+                continue;
+            if (getsockopt(pfd[i].fd, SOL_SOCKET, SO_ERROR, &err, &errlen) != 0)
+                goto out;
+            if (err == 0)
+            goto got_one;
 
-	    /* Remove dead one. */
-	    errno = err;
-	    remove_fd(pfd, addr, slen, &num, i--);
-	}
+            /* Remove dead one. */
+            errno = err;
+            remove_fd(pfd, addr, slen, &num, i--);
+        }
     }
 
 got_one:
     /* We don't want to hand them a non-blocking socket! */
     if (set_nonblock(pfd[i].fd, false))
-	sockfd = pfd[i].fd;
+        sockfd = pfd[i].fd;
 
 out:
     saved_errno = errno;
