@@ -28,7 +28,7 @@ LIBS   += $(LIB_DIR)/$(LIB)
 
 SRC_DIR = src
 SRC     = socket_select.c socket_epoll.c socket.c strmisc.c map.c error.c config.c \
-	  rwlock.c asprintf.c list.c event.c net.c task.c
+	  rwlock.c asprintf.c list.c event.c task.c
 TEST    = tests
 OBJ_DIR = obj
 OBJ     = ${SRC:%.c=${OBJ_DIR}/%.o}

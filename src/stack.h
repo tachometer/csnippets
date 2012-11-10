@@ -56,26 +56,36 @@ static inline void stack_free(struct stack *s, void (*destructor) (void *))
     s->mem = 0;
 }
 
+static inline bool stack_grow(struct stack *s, int new_size)
+{
+    void *tmp = realloc(s->ptr, new_size * s->mem);
+    if (!tmp)
+        return false;
+    s->ptr = tmp;
+    s->size = new_size;
+    return true;
+}
+
 static inline int stack_push(struct stack *s, void *ptr, int where, void (*constructor) (void *))
 {
-    void *tmp;
-    int place;
+    int place = where;
 
     /* If where is -1, find the place ourselves.  */
-    if (where == -1) {
+    if (place == -1) {
         /* Find the first empty place.  */
         for (place = 0; place < s->size && s->ptr[place]; place++);
         /* If there's no place, reallocate  */
         if (place == s->size && s->ptr[place] != NULL) {
-            int new_size = s->size + SIZE_INCREMENT;
-            tmp = realloc(s->ptr, new_size * s->mem);
-            if (!tmp)
+            if (!stack_grow(s, s->size + SIZE_INCREMENT))
                 return -1;
-            s->ptr = tmp;
-            s->size = new_size;
         }
-    } else
-        place = where;
+    } else {
+        assert(place >= 0);
+        if (place > s->size) {
+            if (!stack_grow(s, s->size + SIZE_INCREMENT))
+                return -1;
+        }
+    }
 
     s->ptr[place] = ptr;
     if (likely(constructor))

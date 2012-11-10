@@ -2,7 +2,14 @@
 #define __util_h
 
 #ifndef __cplusplus
+#ifdef _MSC_VER
+typedef enum {
+    false = 0,
+    true  = 1
+} bool;
+#else
 #include <stdbool.h>
+#endif
 #endif
 #include <stdint.h>
 #include <stddef.h>
