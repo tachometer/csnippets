@@ -114,16 +114,20 @@ static void poll_on_server(socket_t *socket)
                     }
 
                     conn = malloc(sizeof(*conn));
-                    if (!conn)
-                        goto out;
-
+                    if (!conn) {
+                        close(their_fd);
+                        continue;
+                    }
                     conn->fd = their_fd;
-                    conn->last_active = time(NULL);
 
-                    if (!set_nonblock(conn->fd, true))
-                        goto out;
+                    if (!set_nonblock(conn->fd, true)) {
+                        close(conn->fd);
+                        free(conn);
+                        continue;
+                    }
 
                     strncpy(conn->ip, inet_ntoa(their_addr.sin_addr), 16);
+                    conn->last_active = time(NULL);
                     if (socket->on_accept) {
                         socket->on_accept(socket, conn);
                         if (conn->on_connect)
@@ -147,10 +151,6 @@ static void poll_on_server(socket_t *socket)
             }
         }
     }
-
-out:
-    close(conn->fd);
-    free(conn);
 }
 
 socket_t *socket_create(void)

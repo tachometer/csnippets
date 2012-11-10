@@ -56,6 +56,9 @@ define ar
 endef
 
 all: ${LIB_DIR}/${LIB} ${BIN_DIR}/$(BIN)
+
+staticlib: ${LIB_DIR}/${LIB}
+binary: ${BIN_DIR}/${BIN}
 clean:
 	$(RM) ${OBJ_DIR}/*.o ${OBJ_DIR}/*.gch ${BIN_DIR}/$(BIN)
 	${RM} ${LIB_DIR}/${LIB}
