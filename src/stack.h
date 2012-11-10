@@ -42,18 +42,20 @@ static inline void stack_free(struct stack *s, void (*destructor) (void *))
 {
     int i;
 
-    for (i = 0; i < s->size; i++)
+    for (i = 0; i < s->size; i++) {
         if (!s->ptr[i])
             continue;
         if (unlikely(!destructor))
             free(s->ptr[i]);
         else
             (*destructor) (s->ptr[i]);
+    }
     free(s->ptr);
     /** XXX it may be a bad idea to do this, but just incase
      * the user wants to use the array on something else. */
     s->size = 0;
     s->mem = 0;
+    s->ptr = NULL;
 }
 
 static inline bool stack_grow(struct stack *s, int new_size)
@@ -74,8 +76,8 @@ static inline int stack_push(struct stack *s, void *ptr, int where, void (*const
     if (place == -1) {
         /* Find the first empty place.  */
         for (place = 0; place < s->size && s->ptr[place]; place++);
-        /* If there's no place, reallocate  */
-        if (place == s->size - 1 && s->ptr[place] != NULL) {
+        /* If there's no space left, reallocate  */
+        if (place == s->size && s->ptr[place] != NULL) {
             if (!stack_grow(s, s->size + SIZE_INCREMENT))
                 return -1;
         }

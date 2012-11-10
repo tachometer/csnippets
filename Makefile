@@ -6,16 +6,15 @@ bindir = ${prefix}/bin
 hdrdir = ${prefix}/include
 
 ifndef DEBUG_FLAGS
-    DEBUG_FLAGS = -g -O0
+    DEBUG_FLAGS = -g -O0 -fno-stack-protector
 endif
 # In order to use select instead of epoll add -D__use_select to the list below
 DEFINES     = -D_GNU_SOURCE -D__debug_list -D__debug_events -D__debug_socket
 INCLUDE_DIR = src
 CFLAGS      = ${DEBUG_FLAGS} -I${INCLUDE_DIR} -Wall -Wno-unused-parameter \
-	      -Wno-sign-compare -Wextra -Wfatal-errors  ${DEFINES}
+	      -Wno-sign-compare -Wextra -Wfatal-errors -include ${SRC_DIR}/util.h ${DEFINES}
 LIBS        = -lpthread
-LDFLAGS     = ${LIBS}
-
+LDFLAGS     = -Wl,--as-needed ${LIBS}
 ifdef WIN32
     LIBS += -lws2_32
 endif
@@ -24,7 +23,7 @@ BIN_DIR = bin
 BIN     = a
 LIB_DIR = lib
 LIB     = libcsnippets.a
-LIBS   += $(LIB_DIR)/$(LIB)
+LIBS   += ${LIB_DIR}/${LIB}
 
 SRC_DIR = src
 SRC     = socket_select.c socket_epoll.c socket.c strmisc.c map.c error.c config.c \
@@ -40,7 +39,7 @@ endef
 else
 define compile
 	@echo Compiling $<
-	@$(CC) -c $(CFLAGS) -include ${SRC_DIR}/util.h -o $@ $<
+	@$(CC) -c $(CFLAGS) -o $@ $<
 endef
 endif
 

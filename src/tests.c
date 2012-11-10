@@ -124,7 +124,7 @@ static void run_stack_test(void)
     stack_init(&on_stack, sizeof(char *), 5);
     for (i = 0; i < 10; i++) {
         char *p;
-        if (asprintf(&p, "%d", i) < 0)
+        if (asprintf(&p, "stack %d", i) < 0)
             return;
         stack_push(&on_stack, p, -1, NULL);
     }
