@@ -36,20 +36,15 @@ run() {
     cd ..
 }
 
-_make_library() {
-    $MAKE staticlib -j$MAKEOPT || exit;
-}
-
-_make_executable() {
-    $MAKE binary -j$MAKEOPT || exit;
-}
-
+# http://shawnwilsher.com/archives/184
 _make() {
-    $MAKE -j$MAKEOPT || exit;
-}
+    pathpat="(/[^/]*)+:[0-9]+"
+    ccred=$(echo -e "\033[0;31m")
+    ccyellow=$(echo -e "\033[0;33m")
+    ccend=$(echo -e "\033[0m")
 
-_make_verbose() {
-    $MAKE -j$MAKEOPT V=1 || exit;
+    $MAKE $1 $2 -j$MAKEOPT 2>&1 | sed -E -e "/[Ee]rror[: ]/ s%$pathpat%$ccred&$ccend%g" -e "/[Ww]arning[: ]/ s%$pathpat%$ccyellow&$ccend%g"
+    $? -ne 0 && exit;
 }
 
 case "$1" in
@@ -59,17 +54,18 @@ case "$1" in
     -a) _make
         run
         ;;
-    -gv) _make_verbose
+    -gv) _make V=1
         run gdb
         ;;
-    -av) _make_verbose
+    -av) _make V=1
         run
         ;;
-    -v) _make_verbose
+    -v) _make V=1
         ;;
-    -l) _make_library
+    -l) _make staticlib
         ;;
-    -e) _make_executable
+    -e) _make staticlib
+        _make binary
         ;;
     *) _make
         ;;
