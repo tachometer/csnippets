@@ -19,22 +19,20 @@
 
 struct stack {
     void **ptr;     /* the internel array */
-    size_t mem;     /* the sizeof(actual_pointer) */
     size_t size;
 };
 
 #define INITIAL_SIZE 10
 #define SIZE_INCREMENT 2
 
-static inline bool stack_init(struct stack *s, size_t mem, size_t size)
+static inline bool stack_init(struct stack *s, size_t size)
 {
     if (!size)
         size = INITIAL_SIZE;
-    s->ptr = calloc(size, mem);
+    s->ptr = calloc(size, sizeof(void *));
     if (!s->ptr)
         return false;
     s->size = size;
-    s->mem = mem;
     return true;
 }
 
@@ -54,13 +52,12 @@ static inline void stack_free(struct stack *s, void (*destructor) (void *))
     /** XXX it may be a bad idea to do this, but just incase
      * the user wants to use the array on something else. */
     s->size = 0;
-    s->mem = 0;
     s->ptr = NULL;
 }
 
 static inline bool stack_grow(struct stack *s, int new_size)
 {
-    void *tmp = realloc(s->ptr, new_size * s->mem);
+    void *tmp = realloc(s->ptr, new_size * sizeof(void *));
     if (!tmp)
         return false;
     s->ptr = tmp;

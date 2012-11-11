@@ -121,7 +121,7 @@ static void run_stack_test(void)
     struct stack on_stack;
     int i;
 
-    stack_init(&on_stack, sizeof(char *), 5);
+    stack_init(&on_stack, 5);
     for (i = 0; i < 10; i++) {
         char *p;
         if (asprintf(&p, "stack %d", i) < 0)
