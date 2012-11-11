@@ -48,7 +48,7 @@ void *__socket_set_init(int fd)
 void __socket_set_deinit(void *p)
 {
     struct sock_events *evs = (struct sock_events *)p;
-    if (!evs)
+    if (unlikely(!evs))
         return;
     free(evs->events);
     free(evs);
@@ -57,7 +57,7 @@ void __socket_set_deinit(void *p)
 void __socket_set_add(void *p, int fd)
 {
     struct sock_events *evs = (struct sock_events *)p;
-    if (!evs)
+    if (unlikely(!evs))
         return;
 
     struct epoll_event ev = {
@@ -77,7 +77,7 @@ void __socket_set_del(int fd)
 int __socket_set_poll(void *p)
 {
     struct sock_events *evs = (struct sock_events *)p;
-    if (!evs)
+    if (unlikely(!evs))
         return 0;
     return epoll_wait(evs->epoll_fd, evs->events, MAX_EVENTS, -1);
 }
@@ -86,7 +86,7 @@ int __socket_set_get_active_fd(void *p, int i)
 {
     uint32_t events;
     struct sock_events *evs = (struct sock_events *)p;
-    if (!evs)
+    if (unlikely(!evs))
         return -1;
 
     events = evs->events[i].events;

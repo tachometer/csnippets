@@ -87,7 +87,7 @@ static inline int stack_push(struct stack *s, void *ptr, int where, void (*const
     }
 
     s->ptr[place] = ptr;
-    if (likely(constructor))
+    if (unlikely(constructor))
         (*constructor) (ptr);
     return place;
 }

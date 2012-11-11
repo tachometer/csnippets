@@ -53,7 +53,7 @@ static void *events_thread(void *d)
         }
         pthread_mutex_unlock(&mutex);
 
-        if (!event)
+        if (unlikely(!event))
             continue;
 
         tasks_add(event->task);
@@ -107,7 +107,7 @@ void events_stop(void)
 event_t *event_create(int delay, task_routine start, void *p)
 {
     event_t *event;
-    if (!start || delay < 0)
+    if (unlikely(!start || delay < 0))
         return NULL;
     event = malloc(sizeof(event_t));
     if (!event)
@@ -128,7 +128,7 @@ void events_add(event_t *event)
     if (!event)
         return;
     pthread_mutex_lock(&mutex);
-    if (running) {
+    if (likely(running)) {
         empty = list_empty(&events);
         list_add(&events, &event->node);
     } else

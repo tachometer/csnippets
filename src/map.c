@@ -35,7 +35,7 @@ static struct pair *get_pair(const struct map *map, const char *key)
 
     pair = bucket->pairs;
     for (i = 0; i < n; i++, pair++)
-        if (map->hash_comp(pair->key, key))
+        if (pair->key && map->hash_comp(pair->key, key))
             return pair;
     return NULL;
 }
@@ -50,9 +50,9 @@ static unsigned long hash(const char *str)
     return hash;
 }
 
-static bool hash_cmp(const char *v1, const char *v2)
+static inline bool hash_cmp(const char *v1, const char *v2)
 {
-    return v1 && !strcmp(v1, v2);
+    return !strcmp(v1, v2);
 }
 
 void map_new(struct map* map)
@@ -129,7 +129,7 @@ struct pair *map_put(const struct map *map, const char *key, void* value)
         return pair;
 
     new_key = malloc((key_len + 1) * sizeof(char));
-    if (unlikely(!new_key))
+    if (likely(!new_key))
         return NULL;
 
     bucket = map->buckets;
@@ -144,7 +144,7 @@ struct pair *map_put(const struct map *map, const char *key, void* value)
         bucket->count++;
     }
 
-    if (!pair) {
+    if (unlikely(!pair)) {
         pair = &bucket->pairs[bucket->count - 1];
         pair->key = new_key;
     }
@@ -168,14 +168,14 @@ int map_get_count(const struct map *map)
         return 0;
 
     bucket = map->buckets;
-    if (unlikely(!bucket))
+    if (likely(!bucket))
         return 0;
 
     n = map->count;
     count = 0;
 
     for (i= 0; i < n; i++, bucket++) {
-        if (!bucket)
+        if (likely(!bucket))
             break;
         pair = bucket->pairs;
         m = bucket->count;

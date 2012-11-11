@@ -18,7 +18,7 @@ struct centry_t *config_parse(const char *filename)
         current_line++;
 
         char *ptr = strchr(line, '#');
-        if (ptr)
+        if (unlikely(ptr))
             *ptr = '\0';
         if (unlikely(*line == '\0' || *line == '\n'))
             continue;
@@ -38,7 +38,7 @@ struct centry_t *config_parse(const char *filename)
                     entry->section[32] = '\0';
                     entry->def = NULL;
 
-                    if (!ret) {
+                    if (unlikely(!ret)) {
                         ret = entry;
                         list_head_init(&ret->children);
                     }
@@ -46,7 +46,7 @@ struct centry_t *config_parse(const char *filename)
                     break;
                 }
             }
-            if (!open_brace) {
+            if (unlikely(!open_brace)) {
                 fatal("parser error: out of brace at line %d\n",
                         current_line);
             }
@@ -78,7 +78,7 @@ struct centry_t *config_parse(const char *filename)
                     fatal("parser error: value with no key[?] at line %d\n",
                             current_line);
                 }
-                if (!ret->def) {
+                if (unlikely(!ret->def)) {
                     ret->def = def;
                     list_head_init(&ret->def->def_children);
                 }

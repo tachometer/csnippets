@@ -402,12 +402,12 @@ int socket_write(connection_t *conn, const char *fmt, ...)
     do
         err = send(conn->fd, data, len, 0);
     while (err == -1 && ERRNO == EINTR);
-    if (err < 0) {
+    if (unlikely(err < 0)) {
         err = ERRNO;
         goto out;
     }
 
-    if (err != len)
+    if (unlikely(err != len))
         fprintf(stderr,
                 "socket_write(): the data sent may be incomplete!\n");
 out:
