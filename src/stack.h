@@ -23,13 +23,13 @@ struct stack {
     size_t size;
 };
 
-#define DEFAULT_SIZE 10
+#define INITIAL_SIZE 10
 #define SIZE_INCREMENT 2
 
 static inline bool stack_init(struct stack *s, size_t mem, size_t size)
 {
     if (!size)
-        size = DEFAULT_SIZE;
+        size = INITIAL_SIZE;
     s->ptr = calloc(size, mem);
     if (!s->ptr)
         return false;

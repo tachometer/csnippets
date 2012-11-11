@@ -18,6 +18,8 @@ EXE="./a"
 EXE_DIR="bin"
 # the "make" command
 MAKE="make"
+# the debugger
+DBG="gdb"
 
 echo "Cleaning up stuff..."
 $MAKE clean
@@ -25,11 +27,21 @@ $MAKE clean
 run() {
     echo "Running $EXE with $ARGS"
     cd $EXE_DIR
-    if [ "$1" = "gdb" ]; then
+    if [ "$1" = "$DBG" ]; then
         $1 --args $EXE $ARGS
     else
         $EXE $ARGS
     fi
+    # return back to the old directory
+    cd ..
+}
+
+_make_library() {
+    $MAKE staticlib -j$MAKEOPT || exit;
+}
+
+_make_executable() {
+    $MAKE binary -j$MAKEOPT || exit;
 }
 
 _make() {
@@ -41,7 +53,7 @@ _make_verbose() {
 }
 
 case "$1" in
-    -g) $MAKE
+    -g) _make
         run gdb
         ;;
     -a) _make
@@ -53,11 +65,13 @@ case "$1" in
     -av) _make_verbose
         run
         ;;
+    -v) _make_verbose
+        ;;
+    -l) _make_library
+        ;;
+    -e) _make_executable
+        ;;
     *) _make
         ;;
 esac
-
-# return back to the old directory
-cd ..
-exit
 

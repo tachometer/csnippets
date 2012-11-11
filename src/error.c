@@ -8,6 +8,7 @@ extern char *prog;
 
 #define __log(s, args...) do { \
     fprintf(stderr, s, ##args); /* freopen specific (stderr) */ \
+    fflush(stderr);             /* write the changes right away */ \
     fprintf(stdout, s, ##args); /* on console */ \
 } while (0)
 
