@@ -2,6 +2,8 @@
  * Copyright (c) 2009, 2011 Per Ola Kristensson <pok21@cam.ac.uk>.
  * Copyright (c) 2012 asamy <f.fallen45@gmail.com>
  *
+ * LGPL v3 or later.
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -98,7 +100,7 @@ struct pair *map_get(const struct map *map, const char *key)
     return get_pair(map, key);
 }
 
-bool map_has(const struct map *map, const char *key)
+__inline__ bool map_has(const struct map *map, const char *key)
 {
     return !!get_pair(map, key);
 }
@@ -129,7 +131,7 @@ struct pair *map_put(const struct map *map, const char *key, void* value)
         return pair;
 
     new_key = malloc((key_len + 1) * sizeof(char));
-    if (likely(!new_key))
+    if (unlikely(!new_key))
         return NULL;
 
     bucket = map->buckets;
