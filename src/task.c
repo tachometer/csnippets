@@ -112,3 +112,14 @@ void tasks_add(task_t *task)
        pthread_cond_signal(&cond);
 }
 
+bool tasks_running(void)
+{
+    bool ret;
+
+    pthread_mutex_lock(&mutex);
+    ret = running;
+    pthread_mutex_unlock(&mutex);
+
+    return ret;
+}
+

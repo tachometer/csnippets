@@ -62,8 +62,6 @@ static void on_read(connection_t *s, const char *buffer, int len)
 static void on_disconnect(connection_t *s)
 {
     printf("%s disconnected\n", s->ip);
-    close(s->fd);
-    xfree(s);
 }
 
 static void on_connect(connection_t *s)
@@ -83,20 +81,27 @@ static void on_accept(socket_t *s, connection_t *n)
 static void run_networking_test(bool server)
 {
     if (!server) {
-        connection_t *conn = malloc(sizeof(connection_t));
+        connection_t *conn = connection_create(&on_connect);
         if (!conn)
             return;
 
-        conn->on_connect = on_connect;
-        printf("connecting to freenode\n");
-        socket_connect(conn, "irc.freenode.net", "6667");
+        printf("connecting to localhost on port 1337\n");
+        socket_connect(conn, "127.0.0.1", "1337");
+
+        char buffer[1024];
+        while (fgets(buffer, sizeof buffer, stdin))
+            socket_write(conn, buffer);
     } else {
-        socket_t *sock = socket_create();
+        socket_t *sock = socket_create(on_accept);
         if (!sock)
             return;
-        sock->on_accept = on_accept;
+
         printf("Server will bind to port 1337.\n");
         socket_listen(sock, NULL, 1337, 10);
+        while (1) {
+            sleep(5);
+            printf("%d connections ATM\n", sock->num_connections);
+        }
     }
 }
 

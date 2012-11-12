@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2012  asamy <f.fallen45@gmail.com>
  *
- * The first few static net functions are borrowed from ccan.
+ * The first few static net_* functions are borrowed from ccan/net.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -52,6 +52,29 @@ extern int  __socket_set_get_active_fd(void *, int);
 #ifdef _WIN32
 static bool is_initialized = false;
 #endif
+
+#define atomic_inc(P) __sync_add_and_fetch((P), 1)
+#define atomic_dec(P) __sync_sub_and_fetch((P), 1)
+
+static void add_connection(socket_t *socket, connection_t *conn)
+{
+    pthread_mutex_lock(&socket->conn_lock);
+
+    list_add(&socket->children, &conn->node);
+    atomic_inc(&socket->num_connections);
+
+    pthread_mutex_unlock(&socket->conn_lock);
+}
+
+static void rm_connection(socket_t *socket, connection_t *conn)
+{
+    pthread_mutex_lock(&socket->conn_lock);
+
+    list_del_from(&socket->children, &conn->node);
+    atomic_dec(&socket->num_connections);
+
+    pthread_mutex_unlock(&socket->conn_lock);
+}
 
 static struct addrinfo *net_client_lookup(const char *hostname,
         const char *service,
@@ -193,10 +216,10 @@ out:
     return sockfd;
 }
 
-static void poll_on_client(connection_t *conn, void *sock_events)
+static bool __poll_on_client(socket_t *parent_socket, connection_t *conn, void *sock_events)
 {
     if (!conn)
-        return;
+        return false;
 
     bool done = false;
     for (;;) {
@@ -219,29 +242,66 @@ static void poll_on_client(connection_t *conn, void *sock_events)
 
     if (done && conn) {
         __socket_set_del(sock_events, conn->fd);
-        list_del(&conn->node);
-        if (conn->on_disconnect)
-            conn->on_disconnect(conn);
+
+        if (parent_socket)
+            rm_connection(parent_socket, conn);
+
+        connection_free(conn);
+        return false;
     }
+
+    return true;
 }
 
-static void poll_on_server(socket_t *socket)
+static void *poll_on_client(void *client)
 {
+    connection_t *conn = (connection_t *)client;
+    void *sock_events;
+
+    sock_events = __socket_set_init(conn->fd);
+    if (!sock_events)
+        return NULL;
+
+    __socket_set_add(sock_events, conn->fd);
+
+    for (;;) {
+        int fd = __socket_set_poll(sock_events);
+        if (fd < 0) {
+            __socket_set_deinit(sock_events);
+            break;
+        }
+
+        if (!__poll_on_client(NULL, conn, sock_events))
+            break;
+    }
+
+    return NULL;
+}
+
+static void *poll_on_server(void *_socket)
+{
+    socket_t *socket = (socket_t *)_socket;
     int n_fds, i;
     void *sock_events;
     connection_t *conn;
     socklen_t len = sizeof(struct sockaddr_in);
 
     sock_events = __socket_set_init(socket->fd);
+    if (!sock_events)
+        return NULL;
+
     __socket_set_add(sock_events, socket->fd);
+
     for (;;) {
         n_fds = __socket_set_poll(sock_events);
-        for (i = 0; i < n_fds; i++) {
+
+        for (i = 0; i < n_fds; ++i) {
             int active_fd = __socket_set_get_active_fd(sock_events, i);
             if (active_fd < 0)
                 continue;
 
             if (socket->fd == active_fd) {
+                /* Loop until we have finished every single connection waiting */
                 for (;;) {
                     struct sockaddr_in their_addr;
                     int their_fd;
@@ -249,8 +309,7 @@ static void poll_on_server(socket_t *socket)
                     their_fd = accept(socket->fd, (struct sockaddr *)&their_addr, &len);
                     if (their_fd == -1) {
                         if (ERRNO == E_AGAIN || ERRNO == E_BLOCK) {
-                            /* We have processed all incoming
-                             * connections */
+                            /* We have processed all of the incoming connections */
                             break;
                         } else {
                             perror("accept");
@@ -259,11 +318,13 @@ static void poll_on_server(socket_t *socket)
                         continue;
                     }
 
-                    conn = malloc(sizeof(*conn));
-                    if (!conn) {
+                    if (!socket->accept_connections) {
+                        __socket_set_del(sock_events, their_fd);
                         close(their_fd);
                         continue;
                     }
+
+                    xmalloc(conn, sizeof(*conn), close(their_fd); continue);
                     conn->fd = their_fd;
 
                     if (!set_nonblock(conn->fd, true)) {
@@ -274,32 +335,34 @@ static void poll_on_server(socket_t *socket)
 
                     strncpy(conn->ip, inet_ntoa(their_addr.sin_addr), 16);
                     conn->last_active = time(NULL);
-                    if (socket->on_accept) {
+
+                    if (likely(socket->on_accept)) {
                         socket->on_accept(socket, conn);
-                        if (conn->on_connect)
+                        if (likely(conn->on_connect))
                             conn->on_connect(conn);
                     }
 
-                    if (!socket->conn) {
+                    if (unlikely(!socket->conn))
                         socket->conn = conn;
-                        list_head_init(&conn->children);
-                    }
-                    list_add(&socket->conn->children, &conn->node);
+
+                    add_connection(socket, conn);
                     __socket_set_add(sock_events, their_fd);
                 }
             } else {
-                list_for_each(&socket->conn->children, conn, node) {
+                list_for_each(&socket->children, conn, node) {
                     if (conn->fd == active_fd)
                         break;
                 }
                 if (conn)
-                    poll_on_client(conn, sock_events);
+                    __poll_on_client(socket, conn, sock_events);
             }
         }
     }
+
+    return NULL;
 }
 
-socket_t *socket_create(void)
+socket_t *socket_create(void (*on_accept) (socket_t *, connection_t *))
 {
     socket_t *ret = malloc(sizeof(*ret));
 #ifdef _WIN32
@@ -315,7 +378,23 @@ socket_t *socket_create(void)
 #endif
     if (!ret)
         return NULL;
+
+    ret->on_accept = on_accept;
     ret->conn = NULL;
+    ret->fd = -1;
+    return ret;
+}
+
+connection_t *connection_create(void (*on_connect) (connection_t *))
+{
+    connection_t *ret;
+
+    ret = malloc(sizeof(*ret));
+    if (!ret)
+        return NULL;
+
+    ret->on_connect = on_connect;
+    ret->last_active = 0;
     ret->fd = -1;
     return ret;
 }
@@ -323,7 +402,9 @@ socket_t *socket_create(void)
 void socket_connect(connection_t *conn, const char *addr, const char *service)
 {
     struct addrinfo *address;
-    void *sock_events;
+    pthread_t thread;
+    pthread_attr_t attr;
+    int ret;
 
     if (conn->fd > 0)
         close(conn->fd);
@@ -337,19 +418,15 @@ void socket_connect(connection_t *conn, const char *addr, const char *service)
         return;
     }
 
-    if (conn->on_connect)
+    if (likely(conn->on_connect))
         conn->on_connect(conn);
     free(address);
 
-    sock_events = __socket_set_init(conn->fd);
-    __socket_set_add(sock_events, conn->fd);
-    while (true) {
-        int fd = __socket_set_poll(sock_events);
-        if (fd < 0) {
-            /* dead socket? */
-            break;
-        }
-        poll_on_client(conn, sock_events);
+    pthread_attr_init(&attr);
+    if ((ret = pthread_create(&thread, &attr, poll_on_client,
+                    (void *)conn)) != 0) {
+        fatal("failed to create thread (%d): %s\n",
+                ret, strerror(ret));
     }
 }
 
@@ -357,6 +434,10 @@ void socket_listen(socket_t *sock, const char *address, int32_t port, long max_c
 {
     struct sockaddr_in srv;
     int reuse_addr = 1;
+    pthread_t thread;
+    pthread_attr_t attr;
+    int ret;
+
     if (!sock)
         return;
 
@@ -379,7 +460,15 @@ void socket_listen(socket_t *sock, const char *address, int32_t port, long max_c
     if (listen(sock->fd, max_conns) == -1)
         return;
 
-    poll_on_server(sock);
+    sock->accept_connections = true;
+    list_head_init(&sock->children);
+
+    pthread_attr_init(&attr);
+    if ((ret = pthread_create(&thread, &attr, poll_on_server,
+                    (void *)sock)) != 0) {
+        fatal("failed to create thread (%d): %s\n",
+                ret, strerror(ret));
+    }
 }
 
 int socket_write(connection_t *conn, const char *fmt, ...)
@@ -390,20 +479,21 @@ int socket_write(connection_t *conn, const char *fmt, ...)
     va_list va;
 
     if (!conn || conn->fd < 0)
-        return EINVAL;
+        return -EINVAL;
 
     va_start(va, fmt);
     len = vasprintf(&data, fmt, va);
     va_end(va);
 
     if (!data)
-        return ENOMEM;
+        return -ENOMEM;
 
     do
         err = send(conn->fd, data, len, 0);
-    while (err == -1 && ERRNO == EINTR);
+    while (err == -1 && errno == EINTR);
+
     if (unlikely(err < 0)) {
-        err = ERRNO;
+        err = errno;
         goto out;
     }
 
@@ -422,7 +512,7 @@ void socket_free(socket_t *socket)
        return;
 
     for (;;) {
-        conn = list_top(&socket->conn->children, connection_t,
+        conn = list_top(&socket->children, connection_t,
                         node);
         if (!conn)
             break;
@@ -434,5 +524,17 @@ void socket_free(socket_t *socket)
     }
 
     free(socket);
+}
+
+void connection_free(connection_t *conn)
+{
+    if (unlikely(!conn || conn->fd < 0))
+        return;
+
+    if (likely(conn->on_disconnect))
+        conn->on_disconnect(conn);
+
+    close(conn->fd);
+    free(conn);
 }
 

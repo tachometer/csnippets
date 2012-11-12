@@ -14,7 +14,7 @@ DEFINES     = -D_GNU_SOURCE -D__debug_list -D__debug_events -D__debug_socket
 INCLUDE_DIR = src
 CFLAGS      = ${DEBUG_FLAGS} -I${INCLUDE_DIR} -Wall -Wno-unused-parameter \
 	      -Wno-sign-compare -Wextra -Wfatal-errors -include ${SRC_DIR}/util.h ${DEFINES}
-LIBS        = -lpthread
+LIBS        = -pthread
 LDFLAGS     = -Wl,--as-needed ${LIBS}
 ifdef WIN32
     LIBS += -lws2_32
@@ -33,7 +33,7 @@ TEST    = tests
 OBJ_DIR = obj
 OBJ     = ${SRC:%.c=${OBJ_DIR}/%.o}
 
-ifdef V
+ifeq ("${origin V}", "command-line")
 define compile
 	${CC} -c $(CFLAGS) $1 -o $@ $<
 endef

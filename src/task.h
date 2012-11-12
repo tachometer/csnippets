@@ -14,6 +14,7 @@ typedef struct {
 } task_t;
 
 extern void tasks_init(void);
+extern bool tasks_running(void);
 extern void tasks_stop(void);
 extern void tasks_add(task_t *task);
 
