@@ -40,7 +40,7 @@ static inline void stack_free(struct stack *s, void (*destructor) (void *))
 {
     int i;
 
-    for (i = 0; i < s->size; i++) {
+    for (i = 0; i < s->size; ++i) {
         if (!s->ptr[i])
             continue;
         if (unlikely(!destructor))
@@ -72,7 +72,7 @@ static inline int stack_push(struct stack *s, void *ptr, int where, void (*const
     /* If where is -1, find the place ourselves.  */
     if (place == -1) {
         /* Find the first empty place.  */
-        for (place = 0; place < s->size && s->ptr[place]; place++);
+        for (place = 0; place < s->size && s->ptr[place]; ++place);
         /* If there's no space left, reallocate  */
         if (place == s->size && s->ptr[place] != NULL) {
             if (!stack_grow(s, s->size + SIZE_INCREMENT))
@@ -108,7 +108,7 @@ static inline bool stack_remove(struct stack *s, void *ptr, bool (*compare_funct
     int i;
     bool r;
 
-    for (i = 0; i < s->size; i++) {
+    for (i = 0; i < s->size; ++i) {
         if (unlikely(!compare_function)) {
             r = !!(s->ptr[i] == ptr);
             if (r) {
