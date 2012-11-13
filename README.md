@@ -2,7 +2,7 @@
 
 [![Build Status](https://secure.travis-ci.org/otfallen/csnippets.png?branch=master)](http://travis-ci.org/otfallen/csnippets)
 
-A nice collection of C code snippets that's meant to take part of other software.
+A nice snippets of C code that's meant to take part of other software.
 
 ### Origin
 
