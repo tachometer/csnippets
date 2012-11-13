@@ -98,8 +98,8 @@ static struct addrinfo *net_client_lookup(const char *hostname,
 
 static bool set_nonblock(int fd, bool nonblock)
 {
-    long flags;
 #ifndef _WIN32
+    long flags;
     flags = fcntl(fd, F_GETFL);
     if (flags == -1)
         return false;
@@ -208,11 +208,11 @@ got_one:
         sockfd = pfd[i].fd;
 
 out:
-    saved_errno = errno;
+    saved_errno = ERRNO;
     for (i = 0; i < num; i++)
         if (pfd[i].fd != sockfd)
             close(pfd[i].fd);
-    errno = saved_errno;
+    set_last_error(saved_errno);
     return sockfd;
 }
 
@@ -478,7 +478,7 @@ int socket_write(connection_t *conn, const char *fmt, ...)
     int err;
     va_list va;
 
-    if (!conn || conn->fd < 0)
+    if (unlikely(!conn || conn->fd < 0))
         return -EINVAL;
 
     va_start(va, fmt);
@@ -493,7 +493,7 @@ int socket_write(connection_t *conn, const char *fmt, ...)
     while (err == -1 && errno == EINTR);
 
     if (unlikely(err < 0)) {
-        err = errno;
+        err = -errno;
         goto out;
     }
 
