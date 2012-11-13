@@ -7,3 +7,5 @@ notifications:
     channels:
       - "irc.freenode.net#csnippets"
       - "irc.quakenet.org#cplusplus"
+    on_success: change
+    skip_join: true
