@@ -21,8 +21,8 @@ void __noreturn error_nret(const char *str, ...)
     vasprintf(&buff, str, ap); 
     va_end(ap);
 
-    __log(buff);
-    __log("%s: error is not recoverable, terminating now...\n", prog);
+    __log("%s: %s\n%s: error is not recoverable, terminating now...\n",
+            prog, buff, prog);
     exit(EXIT_FAILURE);
 }
 

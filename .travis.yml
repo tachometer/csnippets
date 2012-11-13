@@ -6,3 +6,4 @@ notifications:
   irc:
     channels:
       - "irc.freenode.net#csnippets"
+      - "irc.quakenet.org#cplusplus"
