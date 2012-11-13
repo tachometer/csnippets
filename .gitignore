@@ -4,7 +4,6 @@ bin/
 lib/
 .kdev4/
 .deps/
-m4/
 .depcomp
 
 *.kdev4

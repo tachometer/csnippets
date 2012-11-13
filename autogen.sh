@@ -1,2 +1,2 @@
 #!/bin/sh
-autoreconf --force --verbose --install -I config -I m4
+autoreconf --force --verbose --install -I m4
