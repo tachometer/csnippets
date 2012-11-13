@@ -17,7 +17,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include "socket.h"
-#include "platform.h"
 #include "asprintf.h"
 
 #ifdef _WIN32
