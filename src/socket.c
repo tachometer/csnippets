@@ -235,6 +235,7 @@ static bool __poll_on_client(socket_t *parent_socket, connection_t *conn, void *
             break;
         }
 
+        buffer[count] = '\0';
         if (conn && conn->on_read)
             conn->on_read(conn, buffer, count);
     }
@@ -334,6 +335,8 @@ static void *poll_on_server(void *_socket)
 
                     strncpy(conn->ip, inet_ntoa(their_addr.sin_addr), 16);
                     conn->last_active = time(NULL);
+                    /**
+                     * TODO: set conn->remote here */
 
                     if (likely(socket->on_accept)) {
                         socket->on_accept(socket, conn);
@@ -395,6 +398,7 @@ connection_t *connection_create(void (*on_connect) (connection_t *))
     ret->on_connect = on_connect;
     ret->last_active = 0;
     ret->fd = -1;
+    ret->remote = NULL;
     return ret;
 }
 
@@ -417,6 +421,7 @@ void socket_connect(connection_t *conn, const char *addr, const char *service)
         return;
     }
 
+    conn->remote = addr;
     if (likely(conn->on_connect))
         conn->on_connect(conn);
     free(address);
@@ -499,6 +504,10 @@ int socket_write(connection_t *conn, const char *fmt, ...)
     if (unlikely(err != len))
         fprintf(stderr,
                 "socket_write(): the data sent may be incomplete!\n");
+
+    if (conn->on_write)
+        conn->on_write(conn, data, len);
+
 out:
     free(data);
     return err;
@@ -518,7 +527,7 @@ void socket_free(socket_t *socket)
 
         if (conn->fd)
             close(conn->fd);
-        list_del(&conn->node);
+        list_del_from(&socket->children, &conn->node);
         free(conn);
     }
 

@@ -44,6 +44,7 @@ struct socket {
 struct connection {
     int fd;
     char ip[16];
+    char *remote;
     time_t last_active;
 
     void (*on_connect) (connection_t *self);

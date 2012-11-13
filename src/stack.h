@@ -109,7 +109,7 @@ static inline bool stack_remove(struct stack *s, void *ptr, bool (*compare_funct
     bool r;
 
     for (i = 0; i < s->size; ++i) {
-        if (unlikely(!compare_function)) {
+        if (likely(!compare_function)) {
             r = !!(s->ptr[i] == ptr);
             if (r) {
                 if (unlikely(!destructor))

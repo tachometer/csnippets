@@ -13,9 +13,9 @@ MAKEOPT=$(($CORES + 1))
 # arguments to pass to the executable generated
 ARGS="--run-all-tests"
 # Executable
-EXE="./a"
+EXE="./tests"
 # Directory where the executable is.
-EXE_DIR="bin"
+EXE_DIR="examples"
 # the "make" command
 MAKE="make"
 # the debugger

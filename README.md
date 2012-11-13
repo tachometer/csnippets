@@ -26,3 +26,17 @@ A TODO list can be found by creating an issue (milestone) on top of this page.
 
 Personally, I prefer GNU GPL v(X) but some of the code is licensed under MIT (or BSD-MIT)
 
+### Building
+
+In a shell, type the following commands:
+
+```sh
+./configure
+./build.sh
+```
+
+```sh
+./configure --help
+```
+for a list of options available.
+

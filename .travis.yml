@@ -1,11 +1,14 @@
 language: c
 compiler:
   - gcc
-script: make all
+script: |
+  ./autogen.sh
+  ./configure
+  ./build.sh
+
 notifications:
   irc:
     channels:
       - "irc.freenode.net#csnippets"
-      - "irc.quakenet.org#cplusplus"
     on_success: change
     skip_join: true
