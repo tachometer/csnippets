@@ -73,7 +73,7 @@ uninstall: ${bindir}
 ${LIB_DIR}/${LIB}: ${LIB_DIR} ${OBJ_DIR} ${OBJ}
 	${ar}
 
-${BIN_DIR}/${BIN}: ${LIB_DIR}/${LIB} ${OBJ_DIR}/${TEST}.o
+${BIN_DIR}/${BIN}: ${BIN_DIR} ${LIB_DIR}/${LIB} ${OBJ_DIR}/${TEST}.o
 	${link}
 
 ${OBJ_DIR}/${TEST}.o: ${SRC_DIR}/${TEST}.c ${OBJ_DIR}
