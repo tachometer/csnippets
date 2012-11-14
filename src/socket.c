@@ -23,6 +23,7 @@
  */
 #include "socket.h"
 #include "asprintf.h"
+#include "atomic.h"
 
 #ifdef _WIN32
 #define poll WSAPoll
@@ -57,15 +58,12 @@ extern int  __socket_set_get_active_fd(void *, int);
 static bool is_initialized = false;
 #endif
 
-#define atomic_inc(P) __sync_add_and_fetch((P), 1)
-#define atomic_dec(P) __sync_sub_and_fetch((P), 1)
-
 static void add_connection(socket_t *socket, connection_t *conn)
 {
     pthread_mutex_lock(&socket->conn_lock);
 
     list_add(&socket->children, &conn->node);
-    atomic_inc(&socket->num_connections);
+    atomic_ref(&socket->num_connections);
 
     pthread_mutex_unlock(&socket->conn_lock);
 }
@@ -75,7 +73,7 @@ static void rm_connection(socket_t *socket, connection_t *conn)
     pthread_mutex_lock(&socket->conn_lock);
 
     list_del_from(&socket->children, &conn->node);
-    atomic_dec(&socket->num_connections);
+    atomic_deref(&socket->num_connections);
 
     pthread_mutex_unlock(&socket->conn_lock);
 }
