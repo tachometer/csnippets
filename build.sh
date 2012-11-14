@@ -21,6 +21,15 @@ MAKE="make"
 # the debugger
 DBG="gdb"
 
+if [ ! -f Makefile ]; then
+    if [ ! -f configure ]; then
+        echo "Generating configure script via ./autogen.sh"
+        ./autogen.sh
+    fi
+    echo "Generating Makefile via ./configure"
+    ./configure
+fi
+
 echo "Cleaning up stuff..."
 $MAKE clean
 
