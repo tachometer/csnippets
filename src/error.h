@@ -18,10 +18,27 @@
 #define warning(str, args...)   error(LOG_WARNING, str, ##args)
 #define print(str, args...)     error(LOG_NULL, str, ##args)
 
+/** Initialize log file */
 #define log_init()          freopen(LOG_FILE, "w", stderr);
 
+/**
+ * Log a formatted/non-formatted string to stderr and stdout.
+ *
+ * NOTE: This function doesn't return, that means the program will
+ * exit after.
+ */
 extern void __noreturn error_nret(const char *str, ...);
+/**
+ * Log errno and the string (strerror).
+ *
+ * This function doesn't return (exits after).
+ */
 extern void __noreturn log_errno(const char *str, ...);
+/**
+ * Log a string.
+ *
+ * This function doesn't exit.
+ */
 extern void error(int log_type, const char *str, ...);
 
 #endif  /* __error_h */

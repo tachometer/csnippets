@@ -27,15 +27,37 @@
 __begin_header
 
 typedef struct {
-    int32_t delay;
-    task_t *task;
-    struct list_node node;
+    int32_t delay;           /* Delay in seconds, the thread will wait before executing this.  */
+    task_t *task;            /* The task pointer, Internal use only.
+                                This is created by the thread.  */
+    struct list_node node;   /* Next/Prev event.  */
 } event_t;
 
+/**
+ * Initialize events thread
+ *
+ * Creates a thread that runs indepdently and can be stopped
+ * via calling events_stop().
+ */
 extern void events_init(void);
+/**
+ * Stop events thread, this adds any running event to the task queue.
+ *
+ */
 extern void events_stop(void);
+/**
+ * Add an event to the event list.
+ *
+ * @param event, create it with event_create().
+ */
 extern void events_add(event_t *event);
-
+/**
+ * Create an event, NOTE: This does NOT add it to the list.
+ * You must add it manually via events_add().
+ *
+ * Example usage:
+ *    events_add(event_create(10, my_func, my_param));
+ */
 extern event_t *event_create(int delay, task_routine start, void *p);
 
 __end_header

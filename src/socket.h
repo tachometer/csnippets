@@ -37,27 +37,42 @@ typedef struct connection connection_t;
 struct socket {
     int fd;
 
-    struct list_head children;
-    connection_t *conn;
-    unsigned int num_connections;
-    bool accept_connections;
-    pthread_mutex_t conn_lock;
+    struct list_head children;      /* The list of conn */
+    connection_t *conn;             /* The head connection */
+    unsigned int num_connections;   /* Current active connections */
 
+    bool accept_connections;        /* If set to false, every incoming connection will be closed,
+                                       old ones, will still be there.  */
+    pthread_mutex_t conn_lock;      /* The connection lock, for adding new connections,
+                                       removing dead ones, incrementing number of active connections */
+
+    /**
+     * on_accept() this callback is called whenever a new connection
+     * is accepted.  self is this socket, conn is obviously the 
+     * accepted connection.
+     *
+     * See below for more information on what to do when this function is called.
+     */
     void (*on_accept) (socket_t *self, connection_t *conn);
 };
 
 struct connection {
-    int fd;
-    char ip[16];
-    char *remote;
-    time_t last_active;
+    int fd;              /* The socket file descriptor */
+    char ip[16];         /* The IP of this connection */
+    char *remote;        /* Who did we connect to?  Or who did we come from?  */
+    time_t last_active;  /* The timestamp of last activity.  Useful for PING PONG. */
 
+    /* Called when we've have connected.  This is the root of the connection.  
+     * It should be used to setup other callbacks!  */
     void (*on_connect) (connection_t *self);
+    /* Called when we've disconnected.   */
     void (*on_disconnect) (connection_t *self);
+    /* Called when anything is read.  */
     void (*on_read) (connection_t *self, const char *read, int len);
+    /* Called when this connection writes something */
     void (*on_write) (connection_t *self, const char *written, int len);
 
-    struct list_node node;
+    struct list_node node;   /* The node */
 };
 
 /**

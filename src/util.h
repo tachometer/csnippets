@@ -1,3 +1,8 @@
+/**
+ * This file includes and defines important headers.
+ *
+ * This file acts as a pre-compiled header.
+ */
 #ifndef __util_h
 #define __util_h
 
@@ -6,8 +11,11 @@
 #endif
 
 #ifndef __cplusplus
+/**
+ * MSVC stuck in C89, shitty compiler (CL to be specific).
+ */
 #if defined _MSC_VER || HAVE_STDBOOL_H == 0
-typedef enum {
+typedef enum _Bool {
     false = 0,
     true  = 1
 } bool;
@@ -15,6 +23,11 @@ typedef enum {
 #include <stdbool.h>
 #endif
 #endif
+/**
+ * Comon headers.
+ *
+ * I don't like spamming every header with inclusion of those ones
+ */
 #include <stdint.h>
 #include <stddef.h>
 #include <assert.h>
@@ -34,6 +47,8 @@ typedef enum {
 #define countof(array) (sizeof((array)) / sizeof((array)[0]))
 /*
  * some helpers for easy memory management.
+ *
+ * These functions do NOT terminate the process on failure.
  */
 #define xfree(p) do { if (p) free(p); p = NULL; } while (0)
 #define __alloc_failure(s) do { warning("failed to allocate %zd bytes\n", s); } while(0)
@@ -58,6 +73,8 @@ typedef enum {
         action; \
     } \
 } while (0)
+
+/* Common math functions.  */
 #ifndef min
 #define min(a, b)                         \
     __extension__ ({                      \
@@ -75,6 +92,7 @@ typedef enum {
     })
 #endif
 
+/* C++ compatiblity.  */
 #ifdef __cplusplus
 #define __begin_header extern "C" {
 #define __end_header   }
@@ -83,6 +101,7 @@ typedef enum {
 #define __end_header
 #endif
 
+/* Keep compatiblity with winsock.  */
 #ifdef _WIN32
 #ifndef __use_select
     #define __use_select

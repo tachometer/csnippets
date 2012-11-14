@@ -30,6 +30,12 @@ struct stack {
 #define INITIAL_SIZE 10
 #define SIZE_INCREMENT 2
 
+/**
+ * Initialize stack `s'.  Allocates memory of size `size` if > 0
+ * otherwise uses INITIAL_SIZE
+ *
+ * \sa stack_free().
+ */
 static inline bool stack_init(struct stack *s, size_t size)
 {
     if (!size)
@@ -41,6 +47,14 @@ static inline bool stack_init(struct stack *s, size_t size)
     return true;
 }
 
+/**
+ * Free memory used.
+ *
+ * if destructor is not NULL, this function calls destructor on each pointer
+ * that's going to be destroyed  (which means, the user must free it himself).
+ *
+ * \sa stack_push().
+ */
 static inline void stack_free(struct stack *s, void (*destructor) (void *))
 {
     int i;
@@ -53,6 +67,7 @@ static inline void stack_free(struct stack *s, void (*destructor) (void *))
         else
             (*destructor) (s->ptr[i]);
     }
+
     free(s->ptr);
     /** XXX it may be a bad idea to do this, but just incase
      * the user wants to use the array on something else. */
@@ -60,6 +75,11 @@ static inline void stack_free(struct stack *s, void (*destructor) (void *))
     s->ptr = NULL;
 }
 
+/**
+ * Preserve some memory of size `new_size'.
+ * Does not free previous memory.
+ * This is called whenever memory is needed (Internal use).
+ */
 static inline bool stack_grow(struct stack *s, int new_size)
 {
     void *tmp = realloc(s->ptr, new_size * sizeof(void *));
@@ -70,6 +90,17 @@ static inline bool stack_grow(struct stack *s, int new_size)
     return true;
 }
 
+/**
+ * Push item `ptr' on this stack
+ *
+ * `where' can be -1 if we have to figure out the place ourselves.
+ * Specifiying where is good when the user know where to place (saves some cycles).
+ *
+ * constructor can be NULL if not needed.
+ *
+ * \returns -1 on failure or pos of where the item is placed.
+ * \sa stack_pop(), stack_top(), stack_remove().
+ */
 static inline int stack_push(struct stack *s, void *ptr, int where, void (*constructor) (void *))
 {
     int place = where;
@@ -97,16 +128,39 @@ static inline int stack_push(struct stack *s, void *ptr, int where, void (*const
     return place;
 }
 
+/**
+ * Pop an item from the top stack.
+ *
+ * The user must free the pointer himself (and null terminate if possible).
+ *
+ * \sa stack_top()
+ */
 static inline void *stack_pop(struct stack *s)
 {
     return s ? s->ptr[--s->size] : NULL;
 }
 
+/**
+ * Get an item off the top of the stack.
+ *
+ * This keeps the pointer on the stack.
+ *
+ * \sa stack_remove(), stack_pop()
+ */
 static inline void *stack_top(struct stack *s)
 {
     return s ? s->ptr[s->size - 1] : NULL;
 }
 
+/**
+ * Remove an item from the stack.
+ *
+ * If compare_function is specified, it's used instead.
+ * This free's the pointer `ptr' unless destructor is specified.
+ * duplicate is useful when the user knows the item can be duplicated.
+ *
+ * \sa stack_push().
+ */
 static inline bool stack_remove(struct stack *s, void *ptr, bool (*compare_function) (const void *, const void *),
         void (*destructor) (void *), bool duplicate)
 {

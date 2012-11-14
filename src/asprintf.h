@@ -10,7 +10,16 @@
 
 __begin_header
 
+/**
+ * asprintf() - allocates *strp and returns the
+ * length of the string.
+ */
 extern int __printf(2, 3) asprintf(char **strp, const char *fmt, ...);
+/**
+ * Works the same as asprintf() and is used by asprintf()
+ *
+ * This can be useful for a function like socket_write() defined at socket.h
+ */
 extern int vasprintf(char **strp, const char *fmt, va_list va);
 
 __end_header
