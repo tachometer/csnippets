@@ -76,7 +76,7 @@ AC_OUTPUT
 echo
 echo $PACKAGE $VERSION
 echo
-echo Select interface...........  : $socket_select
+echo Select interface............ : $socket_select
 echo Debug build................. : $debug_build
 echo
 

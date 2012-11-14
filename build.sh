@@ -11,9 +11,9 @@ CORES=`grep processor /proc/cpuinfo | wc -l`
 # Process to be passed to make -jN
 MAKEOPT=$(($CORES + 1))
 # arguments to pass to the executable generated
-ARGS="--run-all-tests"
+ARGS=""
 # Executable
-EXE="./tests"
+EXE="./server"
 # Directory where the executable is.
 EXE_DIR="examples"
 # the "make" command
