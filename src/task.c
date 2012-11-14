@@ -21,13 +21,15 @@ static void *tasks_thread(void *p)
         pthread_mutex_lock(&mutex);
         if (list_empty(&tasks))
             pthread_cond_wait(&cond, &mutex);
-        
-        if (!running)
+
+        if (!running) {
+            pthread_mutex_unlock(&mutex);
             break;
+        }
 
         if (!list_empty(&tasks)) {
             task = list_top(&tasks, task_t, node);
-            list_del(&task->node);
+            list_del_from(&tasks, &task->node);
         }
 
         pthread_mutex_unlock(&mutex);
@@ -43,7 +45,7 @@ static void *tasks_thread(void *p)
         task = list_top(&tasks, task_t, node);
         if (!task)
             break;
-        list_del(&task->node);
+        list_del_from(&tasks, &task->node);
         (*task->start_routine) (task->param);
         free(task);
     }
@@ -76,8 +78,8 @@ void tasks_stop(void)
 
     pthread_mutex_lock(&mutex);
     running = false;
-    pthread_cond_signal(&cond);
     pthread_mutex_unlock(&mutex);
+    pthread_cond_signal(&cond);
 
     pthread_join(self, NULL);
     pthread_mutex_destroy(&mutex);
@@ -102,9 +104,9 @@ task_t *task_create(task_routine routine, void *param)
 void tasks_add(task_t *task)
 {
     bool empty = false;
-
     if (!task)
         return;
+
     pthread_mutex_lock(&mutex);
     if (running) {
         empty = list_empty(&tasks);

@@ -70,7 +70,7 @@ case "$1" in
     -l) cd src && _make
         ;;
     -e) cd src && _make
-        cd ../examples && _make
+        cd ../$EXE_DIR && _make
         cd ..
         ;;
     *) _make
