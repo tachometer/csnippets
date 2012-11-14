@@ -1,8 +1,12 @@
 #ifndef __util_h
 #define __util_h
 
+#ifdef HAVE_CONFIG_H
+#include "platform.h"
+#endif
+
 #ifndef __cplusplus
-#ifdef _MSC_VER
+#if defined _MSC_VER || HAVE_STDBOOL_H == 0
 typedef enum {
     false = 0,
     true  = 1

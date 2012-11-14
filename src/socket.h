@@ -90,7 +90,7 @@ extern void connection_free(connection_t *conn);
  * @param addr the address the server is listening on.
  * @param service port or a register service.
  */
-extern void socket_connect(connection_t *conn, const char *addr,
+extern bool socket_connect(connection_t *conn, const char *addr,
         const char *service);
 
 /**
@@ -99,7 +99,7 @@ extern void socket_connect(connection_t *conn, const char *addr,
  * @param address can be NULL if indepdent.
  * @param port port to listen on.
  */
-extern void socket_listen(socket_t *socket, const char *address,
+extern bool socket_listen(socket_t *socket, const char *address,
         int32_t port, long max_conns);
 
 /**

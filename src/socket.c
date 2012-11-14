@@ -402,7 +402,7 @@ connection_t *connection_create(void (*on_connect) (connection_t *))
     return ret;
 }
 
-void socket_connect(connection_t *conn, const char *addr, const char *service)
+bool socket_connect(connection_t *conn, const char *addr, const char *service)
 {
     struct addrinfo *address;
     pthread_t thread;
@@ -414,11 +414,11 @@ void socket_connect(connection_t *conn, const char *addr, const char *service)
 
     address = net_client_lookup(addr, service, AF_INET, SOCK_STREAM);
     if (!address)
-        return;
+        return false;
 
     if ((conn->fd = net_connect(address)) < 0) {
         free(address);
-        return;
+        return false;
     }
 
     conn->remote = addr;
@@ -429,12 +429,15 @@ void socket_connect(connection_t *conn, const char *addr, const char *service)
     pthread_attr_init(&attr);
     if ((ret = pthread_create(&thread, &attr, poll_on_client,
                     (void *)conn)) != 0) {
-        fatal("failed to create thread (%d): %s\n",
-                ret, strerror(ret));
+        fprintf(stderr, "failed to create thread (%d): %s\n",
+                    ret, strerror(ret));
+        return false;
     }
+
+    return true;
 }
 
-void socket_listen(socket_t *sock, const char *address, int32_t port, long max_conns)
+bool socket_listen(socket_t *sock, const char *address, int32_t port, long max_conns)
 {
     struct sockaddr_in srv;
     int reuse_addr = 1;
@@ -443,15 +446,15 @@ void socket_listen(socket_t *sock, const char *address, int32_t port, long max_c
     int ret;
 
     if (!sock)
-        return;
+        return false;
 
     if (sock->fd < 0)
         sock->fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (sock->fd < 0)
-        return;
+        return false;
 
     if (!set_nonblock(sock->fd, true))
-        return;
+        return false;
 
     srv.sin_family = AF_INET;
     srv.sin_addr.s_addr = !address ? INADDR_ANY : inet_addr(address);
@@ -459,10 +462,10 @@ void socket_listen(socket_t *sock, const char *address, int32_t port, long max_c
 
     setsockopt(sock->fd, SOL_SOCKET, SO_REUSEADDR, &reuse_addr, sizeof(reuse_addr));
     if (bind(sock->fd, (struct sockaddr *)&srv, sizeof(srv)) == -1)
-        return;
+        return false;
 
     if (listen(sock->fd, max_conns) == -1)
-        return;
+        return false;
 
     sock->accept_connections = true;
     list_head_init(&sock->children);
@@ -470,9 +473,11 @@ void socket_listen(socket_t *sock, const char *address, int32_t port, long max_c
     pthread_attr_init(&attr);
     if ((ret = pthread_create(&thread, &attr, poll_on_server,
                     (void *)sock)) != 0) {
-        fatal("failed to create thread (%d): %s\n",
-                ret, strerror(ret));
+        fprintf(stderr, "failed to create thread (%d): %s\n",
+                     ret, strerror(ret));
+        return false;
     }
+    return true;
 }
 
 int socket_write(connection_t *conn, const char *fmt, ...)

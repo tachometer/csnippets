@@ -86,7 +86,8 @@ static void run_networking_test(bool server)
             return;
 
         printf("connecting to localhost on port 1337\n");
-        socket_connect(conn, "127.0.0.1", "1337");
+        if (!socket_connect(conn, "127.0.0.1", "1337"))
+            fatal("failed to connect to localhost:1337 (is the server offline?)\n");
 
         char buffer[1024];
         while (fgets(buffer, sizeof buffer, stdin))
@@ -97,7 +98,9 @@ static void run_networking_test(bool server)
             return;
 
         printf("Server will bind to port 1337.\n");
-        socket_listen(sock, NULL, 1337, 10);
+        if (!socket_listen(sock, NULL, 1337, 10))
+            fatal("failed to bind to port 1337 (is it in use?\n");
+
         while (1) {
             sleep(5);
             printf("%d connections ATM\n", sock->num_connections);

@@ -31,6 +31,7 @@ Personally, I prefer GNU GPL v(X) but some of the code is licensed under MIT (or
 In a shell, type the following commands:
 
 ```sh
+./autogen.sh
 ./configure
 ./build.sh
 ```

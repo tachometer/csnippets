@@ -67,10 +67,11 @@ case "$1" in
         ;;
     -v) _make V=1
         ;;
-    -l) _make staticlib
+    -l) cd src && _make
         ;;
-    -e) _make staticlib
-        _make binary
+    -e) cd src && _make
+        cd ../examples && _make
+        cd ..
         ;;
     *) _make
         ;;
