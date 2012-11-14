@@ -38,8 +38,6 @@ void *__socket_set_init(int fd)
         return NULL;
 
     FD_ZERO(&ev->active_fd_set);
-    FD_SET(fd, &ev->active_fd_set);
-
     return ev;
 }
 
@@ -51,7 +49,7 @@ void __socket_set_deinit(void *p)
 void __socket_set_add(void *p, int fd)
 {
     struct sock_events *evs = (struct sock_events *)p;
-    if (!evs)
+    if (unlikely(!evs))
         return;
     FD_SET(fd, &evs->active_fd_set);
 }
@@ -59,7 +57,7 @@ void __socket_set_add(void *p, int fd)
 void __socket_set_del(void *p, int fd)
 {
     struct sock_events *evs = (struct sock_events *)p;
-    if (!evs)
+    if (unlikely(!evs))
         return;
     FD_CLR(fd, &evs->active_fd_set);
 }
@@ -67,7 +65,7 @@ void __socket_set_del(void *p, int fd)
 int __socket_set_poll(void *p)
 {
     struct sock_events *evs = (struct sock_events *)p;
-    if (!evs)
+    if (unlikely(!evs))
         return 0;
 
     evs->read_fd_set = evs->active_fd_set;
@@ -80,7 +78,7 @@ int __socket_set_poll(void *p)
 int __socket_set_get_active_fd(void *p, int i)
 {
     struct sock_events *evs = (struct sock_events *)p;
-    if (!evs)
+    if (unlikely(!evs))
         return -1;
 
     if (FD_ISSET(i, &evs->read_fd_set))
