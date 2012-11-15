@@ -3,8 +3,8 @@
  *
  * This file acts as a pre-compiled header.
  */
-#ifndef __util_h
-#define __util_h
+#ifndef __csnippets_h
+#define __csnippets_h
 
 #ifdef HAVE_CONFIG_H
 #include "platform.h"
@@ -135,5 +135,5 @@ typedef enum _Bool {
 #define E_INPROGRESS EINPROGRESS
 #endif
 
-#endif  /* __util_h */
+#endif  /* __csnippets_h */
 

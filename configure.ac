@@ -5,7 +5,7 @@ AC_INIT([csnippets], [0.1])
 AM_INIT_AUTOMAKE([1.10 foreign silent-rules])
 LT_INIT
 AC_CONFIG_MACRO_DIR([m4])
-AC_CONFIG_SRCDIR([src/util.h])
+AC_CONFIG_SRCDIR([src/csnippets.h])
 AM_CONFIG_HEADER([src/platform.h])
 m4_ifdef([AM_SILENT_RULES],[AM_SILENT_RULES([yes])])
 
