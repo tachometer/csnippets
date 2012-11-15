@@ -266,7 +266,6 @@ static void *poll_on_client(void *client)
         return NULL;
 
     __socket_set_add(sock_events, conn->fd);
-
     for (;;) {
         int fd = __socket_set_poll(sock_events);
         if (fd < 0) {
@@ -284,7 +283,7 @@ static void *poll_on_client(void *client)
 static void *poll_on_server(void *_socket)
 {
     socket_t *socket = (socket_t *)_socket;
-    int n_fds, i;
+    int n_fds, fd;
     void *sock_events;
     connection_t *conn;
     socklen_t len = sizeof(struct sockaddr_in);
@@ -294,12 +293,10 @@ static void *poll_on_server(void *_socket)
         return NULL;
 
     __socket_set_add(sock_events, socket->fd);
-
     for (;;) {
         n_fds = __socket_set_poll(sock_events);
-
-        for (i = 0; i < n_fds; ++i) {
-            int active_fd = __socket_set_get_active_fd(sock_events, i);
+        for (fd = 0; fd < n_fds; ++fd) {
+            int active_fd = __socket_set_get_active_fd(sock_events, fd);
             if (active_fd < 0)
                 continue;
 

@@ -87,19 +87,19 @@ int __socket_set_poll(void *p)
     return epoll_wait(evs->epoll_fd, evs->events, MAX_EVENTS, -1);
 }
 
-int __socket_set_get_active_fd(void *p, int i)
+int __socket_set_get_active_fd(void *p, int fd)
 {
     uint32_t events;
     struct sock_events *evs = (struct sock_events *)p;
     if (unlikely(!evs))
         return -1;
 
-    events = evs->events[i].events;
+    events = evs->events[fd].events;
     if (events & EPOLLERR || events & EPOLLHUP || !(events & EPOLLIN)) {
-        close(evs->events[i].data.fd);
+        close(evs->events[fd].data.fd);
         return -1;
     }
-    return evs->events[i].data.fd;
+    return evs->events[fd].data.fd;
 }
 
 #endif

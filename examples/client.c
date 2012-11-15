@@ -13,6 +13,7 @@ static void on_read(connection_t *s, const char *buffer, int len)
 static void on_disconnect(connection_t *s)
 {
     printf("%s disconnected\n", s->ip);
+    exit(EXIT_SUCCESS);
 }
 
 static void on_connect(connection_t *s)

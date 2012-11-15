@@ -64,26 +64,29 @@ void __socket_set_del(void *p, int fd)
 
 int __socket_set_poll(void *p)
 {
+    int ret;
     struct sock_events *evs = (struct sock_events *)p;
     if (unlikely(!evs))
         return 0;
 
     evs->read_fd_set = evs->active_fd_set;
-    if (select(FD_SETSIZE, &evs->read_fd_set, NULL, NULL, NULL) < 0)
+    ret = select(FD_SETSIZE, &evs->read_fd_set, NULL, NULL, NULL);
+    if (ret < 0)
         return 0;
 
-    return FD_SETSIZE;
+    return ret;
 }
 
-int __socket_set_get_active_fd(void *p, int i)
+int __socket_set_get_active_fd(void *p, int fd)
 {
     struct sock_events *evs = (struct sock_events *)p;
     if (unlikely(!evs))
         return -1;
 
-    if (FD_ISSET(i, &evs->read_fd_set))
-        return i;
+    if (FD_ISSET(fd, &evs->read_fd_set))
+        return fd;
     return -1;
 }
 
 #endif
+

@@ -52,7 +52,7 @@ _make() {
     ccyellow=$(echo -e "\033[0;33m")
     ccend=$(echo -e "\033[0m")
 
-    $MAKE $1 $2 -j$MAKEOPT 2>&1 | sed -E -e "/[Ee]rror[: ]/ s%$pathpat%$ccred&$ccend%g" -e "/[Ww]arning[: ]/ s%$pathpat%$ccyellow&$ccend%g"
+    $MAKE $1 -j$MAKEOPT 2>&1 | sed -E -e "/[Ee]rror[: ]/ s%$pathpat%$ccred&$ccend%g" -e "/[Ww]arning[: ]/ s%$pathpat%$ccyellow&$ccend%g"
 # FIXME:
 #   find another way of checking the exit status,
 #   since $? will now point to exit status of sed and not make
