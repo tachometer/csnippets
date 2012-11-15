@@ -29,6 +29,7 @@
 
 struct sock_events {
     fd_set active_fd_set, read_fd_set;
+    size_t maxfd;
 };
 
 void *__socket_set_init(int fd)
@@ -38,6 +39,9 @@ void *__socket_set_init(int fd)
         return NULL;
 
     FD_ZERO(&ev->active_fd_set);
+    FD_SET(fd, &ev->active_fd_set);
+
+    ev->maxfd = fd;
     return ev;
 }
 
@@ -52,6 +56,8 @@ void __socket_set_add(void *p, int fd)
     if (unlikely(!evs))
         return;
     FD_SET(fd, &evs->active_fd_set);
+    if (fd > evs->maxfd)
+        evs->maxfd = fd;
 }
 
 void __socket_set_del(void *p, int fd)
@@ -70,7 +76,7 @@ int __socket_set_poll(void *p)
         return 0;
 
     evs->read_fd_set = evs->active_fd_set;
-    ret = select(FD_SETSIZE, &evs->read_fd_set, NULL, NULL, NULL);
+    ret = select(evs->maxfd + 1, &evs->read_fd_set, NULL, NULL, NULL);
     if (ret < 0)
         return 0;
 
