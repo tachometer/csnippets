@@ -49,6 +49,7 @@ static void *tasks_thread(void *p)
         (*task->start_routine) (task->param);
         free(task);
     }
+
     return NULL;
 }
 

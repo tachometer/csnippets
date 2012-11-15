@@ -16,10 +16,10 @@ OPTIONAL_FLAGS=""
 DEBUG_FLAGS="-O0 -fno-stack-protector -march=native -fomit-frame-pointer"
 
 # check if we want select enabled
-socket_select=no
-AC_ARG_ENABLE(socket-select, [  --enable-socket-select		enable select interface],
+select_handler=no
+AC_ARG_ENABLE(select-handler, [  --enable-socket-select		enable select interface],
 	[OPTIONAL_FLAGS="$OPTIONAL_FLAGS -D__use_select"]
-	socket_select=yes
+	select_handler=yes
 )
 
 # check if we want a debug build
@@ -63,7 +63,7 @@ AC_CHECK_FUNCS([gethostbyname gethostname memset strcasecmp strncasecmp strstr s
 AC_CHECK_HEADERS([pthread.h], ,[AC_MSG_ERROR("pthread header not found.")])
 AC_CHECK_LIB(pthread, main, ,[AC_MSG_ERROR("Linking against pthread library failed")])
 
-if test "socket_select" = "no" ; then
+if test "select_handler" = "no" ; then
     AC_CHECK_HEADERS([sys/epoll.h], ,[AC_MSG_ERROR("sys/epoll not found")])
     OPTIONAL_FLAGS="$OPTIONAL_FLAGS -D__use_epoll"
 fi
@@ -76,7 +76,7 @@ AC_OUTPUT
 echo
 echo $PACKAGE $VERSION
 echo
-echo Select interface............ : $socket_select
+echo Select handler.............. : $select_handler
 echo Debug build................. : $debug_build
 echo
 
