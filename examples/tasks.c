@@ -46,15 +46,26 @@ int main(int argc, char **argv)
     tasks_init();
     events_init();
 
+    printf("Giving some time for the threads to run...\n");
     sleep(2);    /* wait for both threads to run */
+
+    printf("Adding task to test()\n");
     tasks_add(task_create(test, NULL));
 
+    printf("Creating an event for reading configuration.\n");
     events_add(event_create(2, config_parse_event,
                 argc > 1 ? (void *)argv[1] : (void *)"config_test"));
+
+    printf("Adding an event (with the test() function as the routine)\n");
     events_add(event_create(2, test, NULL));
+
+    printf("Waiting a bit for the tasks to execute...\n");
     sleep(5);
 
+    printf("Adding another event (with the test() function as the routine)\n");
     events_add(event_create(3, test, NULL));
+
+    printf("Stopping both threads\n");
     events_stop();
     tasks_stop();
 
