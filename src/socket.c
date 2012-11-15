@@ -78,7 +78,7 @@ static void rm_connection(socket_t *socket, connection_t *conn)
     pthread_mutex_unlock(&socket->conn_lock);
 }
 
-static struct addrinfo *net_client_lookup(const char *hostname,
+static struct addrinfo *net_lookup(const char *hostname,
         const char *service,
         int family,
         int socktype)
@@ -335,8 +335,7 @@ static void *poll_on_server(void *_socket)
 
                     strncpy(conn->ip, inet_ntoa(their_addr.sin_addr), 16);
                     conn->last_active = time(NULL);
-                    /**
-                     * TODO: set conn->remote here */
+                    /*  TODO: set conn->remote here */
 
                     if (likely(socket->on_accept)) {
                         socket->on_accept(socket, conn);
@@ -412,19 +411,19 @@ bool socket_connect(connection_t *conn, const char *addr, const char *service)
     if (conn->fd > 0)
         close(conn->fd);
 
-    address = net_client_lookup(addr, service, AF_INET, SOCK_STREAM);
+    address = net_lookup(addr, service, AF_INET, SOCK_STREAM);
     if (!address)
         return false;
 
     if ((conn->fd = net_connect(address)) < 0) {
-        free(address);
+        freeaddrinfo(address);
         return false;
     }
+    freeaddrinfo(address);
 
     conn->remote = addr;
     if (likely(conn->on_connect))
         conn->on_connect(conn);
-    free(address);
 
     pthread_attr_init(&attr);
     if ((ret = pthread_create(&thread, &attr, poll_on_client,
@@ -437,35 +436,35 @@ bool socket_connect(connection_t *conn, const char *addr, const char *service)
     return true;
 }
 
-bool socket_listen(socket_t *sock, const char *address, int32_t port, long max_conns)
+bool socket_listen(socket_t *sock, const char *address, const char *service, long max_conns)
 {
-    struct sockaddr_in srv;
     int reuse_addr = 1;
     pthread_t thread;
     pthread_attr_t attr;
     int ret;
+    struct addrinfo *addr;
 
     if (!sock)
         return false;
 
+    addr = net_lookup(address, service, AF_INET, SOCK_STREAM);
+    if (!addr)
+        return false;
+
     if (sock->fd < 0)
-        sock->fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+        sock->fd = socket(addr->ai_family, addr->ai_socktype, addr->ai_protocol);
     if (sock->fd < 0)
         return false;
 
     if (!set_nonblock(sock->fd, true))
-        return false;
-
-    srv.sin_family = AF_INET;
-    srv.sin_addr.s_addr = !address ? INADDR_ANY : inet_addr(address);
-    srv.sin_port = htons(port);
+        goto out;
 
     setsockopt(sock->fd, SOL_SOCKET, SO_REUSEADDR, &reuse_addr, sizeof(reuse_addr));
-    if (bind(sock->fd, (struct sockaddr *)&srv, sizeof(srv)) == -1)
-        return false;
+    if (bind(sock->fd, addr->ai_addr, addr->ai_addrlen) == -1)
+        goto out;
 
     if (listen(sock->fd, max_conns) == -1)
-        return false;
+        goto out;
 
     sock->accept_connections = true;
     list_head_init(&sock->children);
@@ -477,7 +476,14 @@ bool socket_listen(socket_t *sock, const char *address, int32_t port, long max_c
                      ret, strerror(ret));
         return false;
     }
+
     return true;
+out:
+    if (addr)
+        freeaddrinfo(addr);
+    if (sock->fd)
+        close(sock->fd);
+    return false;
 }
 
 int socket_write(connection_t *conn, const char *fmt, ...)

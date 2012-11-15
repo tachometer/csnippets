@@ -51,7 +51,7 @@ int main(int argc, char **argv)
         return 1;
 
     if (!socket_listen(socket, argc > 1 ? argv[1] : NULL,
-                argc > 2 ? atoi(argv[2]) : 1337,
+                argc > 2 ? argv[2] : "1337",
                 argc > 3 ? atoi(argv[3]) : 10))
         return 1;
 

@@ -120,7 +120,7 @@ extern bool socket_connect(connection_t *conn, const char *addr,
  * @param port port to listen on.
  */
 extern bool socket_listen(socket_t *socket, const char *address,
-        int32_t port, long max_conns);
+        const char *service, long max_conns);
 
 /**
  * Write on a socket connection
