@@ -96,10 +96,10 @@ void events_init(void)
     if (rc != 0)
         fatal("failed to setdetachstate");
 
+    running = true;
     rc = pthread_create(&self, &attr, &events_thread, NULL);
     if (rc != 0)
         fatal("failed to create thread");
-    running = true;
 }
 
 void events_stop(void)

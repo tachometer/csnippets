@@ -66,10 +66,10 @@ void tasks_init(void)
     if (rc != 0)
         fatal("failed to setdetachstate");
 
+    running = true;
     rc = pthread_create(&self, &attr, &tasks_thread, NULL);
     if (rc != 0)
         fatal("failed to create thread");
-    running = true;
 }
 
 void tasks_stop(void)
