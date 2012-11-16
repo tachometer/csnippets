@@ -2,8 +2,6 @@ language: c
 compiler:
   - gcc
 script: |
-  ./autogen.sh
-  ./configure
   ./build.sh
 
 notifications:

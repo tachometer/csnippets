@@ -21,14 +21,12 @@ MAKE="make"
 # the debugger
 DBG="gdb"
 
-if [ ! -f Makefile ]; then
-    if [ ! -f configure ]; then
-        echo "Generating configure script via ./autogen.sh"
-        ./autogen.sh
-    fi
-    echo "Generating Makefile via ./configure"
-    ./configure
+if [ ! -d build ]; then
+    mkdir build
 fi
+
+cd build
+cmake ..
 
 echo "Cleaning up stuff..."
 $MAKE clean
@@ -52,13 +50,7 @@ _make() {
     ccyellow=$(echo -e "\033[0;33m")
     ccend=$(echo -e "\033[0m")
 
-    $MAKE $1 -j$MAKEOPT 2>&1 | sed -E -e "/[Ee]rror[: ]/ s%$pathpat%$ccred&$ccend%g" -e "/[Ww]arning[: ]/ s%$pathpat%$ccyellow&$ccend%g"
-# FIXME:
-#   find another way of checking the exit status,
-#   since $? will now point to exit status of sed and not make
-#   if [ $? -ne 0 ]; then
-#       exit
-#   fi
+    $MAKE $1 || exit
 }
 
 case "$1" in
@@ -85,4 +77,6 @@ case "$1" in
     *) _make
         ;;
 esac
+
+cd ..
 

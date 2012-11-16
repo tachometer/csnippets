@@ -1,11 +1,6 @@
 #include "task.h"
 
-#if HAVE_PTHREAD_H
 #include <pthread.h>
-#else
-/* TODO: use something else */
-#error POSIX threading is required for tasks.
-#endif
 
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t  cond  = PTHREAD_COND_INITIALIZER;

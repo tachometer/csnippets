@@ -21,12 +21,7 @@
  */
 #include "event.h"
 
-#if HAVE_PTHREAD_H
 #include <pthread.h>
-#else
-/* TODO: use something else */
-#error POSIX threading is required for events.
-#endif
 #include <pthread.h>
 #include <time.h>
 #include <errno.h>

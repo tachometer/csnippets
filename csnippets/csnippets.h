@@ -14,7 +14,7 @@
 /**
  * MSVC stuck in C89, shitty compiler (CL to be specific).
  */
-#if defined _MSC_VER || HAVE_STDBOOL_H == 0
+#if defined _MSC_VER
 typedef enum _Bool {
     false = 0,
     true  = 1
