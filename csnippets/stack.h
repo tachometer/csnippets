@@ -62,7 +62,7 @@ static inline void stack_free(struct stack *s, void (*destructor) (void *))
     for (i = 0; i < s->size; ++i) {
         if (!s->ptr[i])
             continue;
-        if (unlikely(!destructor))
+        if (!destructor)
             free(s->ptr[i]);
         else
             (*destructor) (s->ptr[i]);
@@ -123,7 +123,7 @@ static inline int stack_push(struct stack *s, void *ptr, int where, void (*const
     }
 
     s->ptr[place] = ptr;
-    if (unlikely(constructor))
+    if (constructor)
         (*constructor) (ptr);
     return place;
 }
@@ -168,10 +168,10 @@ static inline bool stack_remove(struct stack *s, void *ptr, bool (*compare_funct
     bool r;
 
     for (i = 0; i < s->size; ++i) {
-        if (likely(!compare_function)) {
+        if (!compare_function) {
             r = !!(s->ptr[i] == ptr);
             if (r) {
-                if (unlikely(!destructor))
+                if (!destructor)
                     free(s->ptr[i]);
                 else
                     (*destructor) (s->ptr[i]);
@@ -180,7 +180,7 @@ static inline bool stack_remove(struct stack *s, void *ptr, bool (*compare_funct
         } else {
             r = (*compare_function) (s->ptr[i], ptr);
             if (r) {
-                 if (unlikely(!destructor))
+                 if (!destructor)
                     free(s->ptr[i]);
                 else
                     (*destructor) (s->ptr[i]);
