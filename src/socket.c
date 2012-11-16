@@ -324,7 +324,7 @@ static void *poll_on_server(void *_socket)
                         continue;
                     }
 
-                    xmalloc(conn, sizeof(*conn), close(their_fd); continue);
+                    xmalloc(conn, sizeof(*conn), close(their_fd); goto out);
                     conn->fd = their_fd;
 
                     if (!set_nonblock(conn->fd, true)) {
@@ -361,6 +361,9 @@ static void *poll_on_server(void *_socket)
     }
 
     return NULL;
+out:
+    socket_free(socket);
+    pthread_exit(NULL);
 }
 
 socket_t *socket_create(void (*on_accept) (socket_t *, connection_t *))
