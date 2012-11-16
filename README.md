@@ -28,16 +28,14 @@ Personally, I prefer GNU GPL v(X) but some of the code is licensed under MIT (or
 
 ### Building
 
-In a shell, type the following commands:
-
 ```sh
-./autogen.sh
-./configure
 ./build.sh
 ```
-
+or manually:
 ```sh
-./configure --help
+mkdir build && cd build
+cmake ..
+make -jCORES
 ```
-for a list of options available.
+replace CORES with your cores.
 
