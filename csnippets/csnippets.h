@@ -53,7 +53,7 @@ typedef enum _Bool {
 #define xfree(p) do { if (p) free(p); p = NULL; } while (0)
 #define __alloc_failure(s) do { warning("failed to allocate %zd bytes\n", s); } while(0)
 #define xmalloc(p, s, action) do {  \
-    p = malloc(s); \
+    p = calloc(1, s); \
     if (unlikely(!p)) { \
         __alloc_failure(s); \
         action; \

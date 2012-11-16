@@ -88,9 +88,7 @@ task_t *task_create(task_routine routine, void *param)
     if (!routine)
         return NULL;
 
-    task = malloc(sizeof(task_t));
-    if (!task)
-        return NULL;
+    xmalloc(task, sizeof(task_t), return NULL);
 
     task->start_routine = routine;
     task->param = param;

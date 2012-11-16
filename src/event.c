@@ -114,9 +114,9 @@ event_t *event_create(int delay, task_routine start, void *p)
     event_t *event;
     if (unlikely(!start || delay < 0))
         return NULL;
-    event = malloc(sizeof(event_t));
-    if (!event)
-        return NULL;
+
+    xmalloc(event, sizeof(event_t), return NULL);
+
     event->delay = delay;
     event->task = task_create(start, p);
     if (!event->task) {

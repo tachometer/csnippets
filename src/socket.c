@@ -365,7 +365,7 @@ static void *poll_on_server(void *_socket)
 
 socket_t *socket_create(void (*on_accept) (socket_t *, connection_t *))
 {
-    socket_t *ret = malloc(sizeof(*ret));
+    socket_t *ret;
 #ifdef _WIN32
     WSADATA wsa;
     if (!is_initialized) {
@@ -377,8 +377,7 @@ socket_t *socket_create(void (*on_accept) (socket_t *, connection_t *))
         initialized = true;
     }
 #endif
-    if (!ret)
-        return NULL;
+    xmalloc(ret, sizeof(socket_t), return NULL);
 
     ret->on_accept = on_accept;
     ret->conn = NULL;
@@ -390,9 +389,7 @@ connection_t *connection_create(void (*on_connect) (connection_t *))
 {
     connection_t *ret;
 
-    ret = malloc(sizeof(*ret));
-    if (!ret)
-        return NULL;
+    xmalloc(ret, sizeof(*ret), return NULL);
 
     ret->on_connect = on_connect;
     ret->last_active = 0;
