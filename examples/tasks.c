@@ -2,6 +2,7 @@
 #include "event.h"
 #include "config.h"
 
+#include <unistd.h>
 char *prog;
 
 static void config_parse_event(void *filename)

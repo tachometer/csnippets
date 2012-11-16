@@ -23,6 +23,7 @@
 
 #define MAX_EVENTS 1024
 #include <sys/epoll.h>
+#include <unistd.h>   /* close() */
 
 struct sock_events {
     struct epoll_event *events;

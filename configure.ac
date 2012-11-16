@@ -1,9 +1,11 @@
 dnl Process this file with autoconf to produce a configure script.
+AC_INIT([csnippets],
+        m4_esyscmd([build-aux/git-version-gen .tarball-version]),
+        [f.fallen45@gmail.com])
 AC_PREREQ([2.50])
-# TODO: use git if it's a git version, 0.1 for now....
-AC_INIT([csnippets], [0.1])
 AM_INIT_AUTOMAKE([1.10 foreign silent-rules])
 LT_INIT
+
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_SRCDIR([csnippets/csnippets.h])
 AM_CONFIG_HEADER([csnippets/platform.h])
@@ -13,7 +15,7 @@ AC_PROG_CC
 AC_LANG(C)
 
 OPTIONAL_FLAGS=""
-DEBUG_FLAGS="-O0 -fno-stack-protector -march=native -fomit-frame-pointer"
+DEBUG_FLAGS="-O0 -march=native -fomit-frame-pointer"
 
 # check if we want select enabled
 select_handler=no

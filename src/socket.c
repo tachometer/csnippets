@@ -421,7 +421,7 @@ bool socket_connect(connection_t *conn, const char *addr, const char *service)
     }
     freeaddrinfo(address);
 
-    conn->remote = addr;
+    conn->remote = (char *)addr;
     if (likely(conn->on_connect))
         conn->on_connect(conn);
 
