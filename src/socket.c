@@ -361,12 +361,12 @@ socket_t *socket_create(void (*on_accept) (socket_t *, connection_t *))
 #ifdef _WIN32
     WSADATA wsa;
     if (!is_initialized) {
-        if (!WSAStartup(MAKEWORD(2,2), &wsa)) {
+        if (0 != WSAStartup(MAKEWORD(2,2), &wsa)) {
             WSACleanup();
             fprintf(stderr, "WSAStartup() failed\n");
             abort();
         }
-        initialized = true;
+        is_initialized = true;
     }
 #endif
     xmalloc(ret, sizeof(socket_t), return NULL);
@@ -533,7 +533,7 @@ out:
 bool socket_read(connection_t *conn, struct sk_buff *buff, size_t size)
 {
     char *buffer;
-    size_t count;
+    ssize_t count;
 
     if (!conn)
         return false;
@@ -545,7 +545,7 @@ bool socket_read(connection_t *conn, struct sk_buff *buff, size_t size)
     if (!buffer)
         return false;
 
-    count = read(conn->fd, buffer, size);
+    count = recv(conn->fd, buffer, size, 0);
     if (count == -1) {
         if (ERRNO != E_AGAIN && errno != E_BLOCK)
             return false;

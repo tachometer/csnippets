@@ -47,7 +47,7 @@ add_definitions(-D"BUILD_REVISION=\\\"${BUILD_REVISION}\\\"")
 
 if(WIN32)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mthreads -D__use_select")
-    set(src_DEFINITIONS ${src_DEFINITIONS} -D_WIN32_WINNT=0x0501)
+    set(src_DEFINITIONS ${src_DEFINITIONS} -D_WIN32_WINNT=0x0600)
     set(CMAKE_C_LINK_FLAGS "${CMAKE_C_LINK_FLAGS} -Wl,--large-address-aware") # strip all debug information
     set(src_LIBRARIES "-lws2_32")
 elseif(APPLE)
