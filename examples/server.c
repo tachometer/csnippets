@@ -12,12 +12,12 @@ char *prog;  /* progran name */
 
 static void on_read(connection_t *s, const struct sk_buff *buff)
 {
-    printf("(read)[%d][%zd]: %s\n", s->fd, buff->size, buff->data);
+    printf("(read)[%d][%d]: %s\n", s->fd, buff->size, buff->data);
 }
 
 static void on_write(connection_t *s, const struct sk_buff *buff)
 {
-    printf("(write)[%d][%zd]: %s\n", s->fd, buff->size, buff->data);
+    printf("(write)[%d][%d]: %s\n", s->fd, buff->size, buff->data);
 }
 
 static void on_disconnect(connection_t *s)

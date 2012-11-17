@@ -28,6 +28,7 @@
 #ifdef _WIN32
 #define poll WSAPoll
 #define pollfd WSAPOLLFD
+#define _WIN32_WINNT 0x600
 #include <winsock2.h>
 #include <ws2tcpip.h>    /* socklen_t */
 #else
@@ -226,6 +227,22 @@ static bool __poll_on_client(socket_t *parent_socket, connection_t *conn, void *
     if (unlikely(!conn))
         return false;
 
+    bool done = false;
+    for (;;) {
+        ssize_t count;
+        char buffer[4096];
+
+        count = recv(conn->fd, buffer, sizeof buffer,0);
+        if (count == -1) {
+            if (ERRNO != E_AGAIN && ERRNO != E_BLOCK)
+                done = true;
+            break;
+        } else if (count == 0) { /* EOF */
+            done = true;
+            break;
+        }
+    }
+
     conn->last_active = time(NULL);
     if (!conn->auto_read) {
         fprintf(stdout,
@@ -247,7 +264,7 @@ static bool __poll_on_client(socket_t *parent_socket, connection_t *conn, void *
     return true;
 }
 
-static void *poll_on_client(void *client)
+void *poll_on_client(void *client)
 {
     connection_t *conn = (connection_t *)client;
     void *sock_events;
@@ -271,7 +288,7 @@ static void *poll_on_client(void *client)
     return NULL;
 }
 
-static void *poll_on_server(void *_socket)
+void *poll_on_server(void *_socket)
 {
     socket_t *socket = (socket_t *)_socket;
     int n_fds, fd;
@@ -285,8 +302,28 @@ static void *poll_on_server(void *_socket)
     __socket_set_add(socket->events, socket->fd);
     for (;;) {
         n_fds = __socket_set_poll(socket->events);
-        for (fd = 0; fd < n_fds; ++fd) {
-            int active_fd = __socket_set_get_active_fd(socket->events, fd);
+        if (true)
+        {
+            int active_fd = 0;
+            if (socket->num_connections==0) 
+              active_fd = __socket_set_get_active_fd(socket->events, socket->fd);
+            else {
+              active_fd=socket->conn->fd;
+
+              /*doesn't work, because the list doesn't contain the list of children sockets.
+
+              list_head *root=socket->children;
+              list_head *ptr=root;
+
+              do
+              {
+                active_fd=__socket_set_get_active_fd(sock_events,ptr->conn->fd);
+                if (active_fd != -1)
+                  break;
+                ptr=ptr->next;
+              } while (ptr!=root);*/
+            }
+
             if (active_fd < 0)
                 continue;
 
@@ -313,8 +350,9 @@ static void *poll_on_server(void *_socket)
                         continue;
                     }
 
-                    xmalloc(conn, sizeof(*conn), close(their_fd); goto out);
+                    xcalloc(conn, sizeof(*conn),1, close(their_fd); goto out);
                     conn->auto_read = true;
+
                     conn->fd = their_fd;
 
                     if (!set_nonblock(conn->fd, true)) {
@@ -361,15 +399,15 @@ socket_t *socket_create(void (*on_accept) (socket_t *, connection_t *))
 #ifdef _WIN32
     WSADATA wsa;
     if (!is_initialized) {
-        if (!WSAStartup(MAKEWORD(2,2), &wsa)) {
+        if (WSAStartup(MAKEWORD(2,2), &wsa)) {
             WSACleanup();
             fprintf(stderr, "WSAStartup() failed\n");
             abort();
         }
-        initialized = true;
+        is_initialized = true;
     }
 #endif
-    xmalloc(ret, sizeof(socket_t), return NULL);
+    xcalloc(ret, sizeof(socket_t), 1, return NULL);
 
     ret->on_accept = on_accept;
     ret->conn = NULL;
@@ -533,7 +571,7 @@ out:
 bool socket_read(connection_t *conn, struct sk_buff *buff, size_t size)
 {
     char *buffer;
-    size_t count;
+    ssize_t count;
 
     if (!conn)
         return false;
@@ -545,9 +583,10 @@ bool socket_read(connection_t *conn, struct sk_buff *buff, size_t size)
     if (!buffer)
         return false;
 
-    count = read(conn->fd, buffer, size);
+    count = recv(conn->fd, buffer, size, 0);
     if (count == -1) {
-        if (ERRNO != E_AGAIN && errno != E_BLOCK)
+      printf("ERRNO: %d\n",ERRNO);
+        if (ERRNO != E_AGAIN && ERRNO != E_BLOCK)
             return false;
     } else if (count == 0)
         return false;
