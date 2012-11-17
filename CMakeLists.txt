@@ -11,7 +11,7 @@ add_library(csnippets ${src_SOURCES})
 
 target_link_libraries(csnippets ${src_LIBRARIES})
 
-add_executable(server ${examples_SOURCES})
 add_custom_target(run COMMAND server DEPENDS server WORKING_DIRECTORY ${CMAKE_PROJECT_DIR})
+add_executable(server ${examples_SOURCES})
 target_link_libraries(server ${examples_LIBRARIES})
 

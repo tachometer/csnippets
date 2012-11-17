@@ -220,36 +220,27 @@ out:
 
 static bool __poll_on_client(socket_t *parent_socket, connection_t *conn, void *sock_events)
 {
-    if (!conn)
+    bool err;
+    struct sk_buff buff;
+
+    if (unlikely(!conn))
         return false;
 
-    bool done = false;
-    for (;;) {
-        ssize_t count;
-        char buffer[4096];
-
-        count = read(conn->fd, buffer, sizeof buffer);
-        if (count == -1) {
-            if (ERRNO != E_AGAIN && errno != E_BLOCK)
-                done = true;
-            break;
-        } else if (count == 0) { /* EOF */
-            done = true;
-            break;
-        }
-
-        buffer[count] = '\0';
-        if (conn && conn->on_read)
-            conn->on_read(conn, buffer, count);
+    conn->last_active = time(NULL);
+    if (!conn->auto_read) {
+        fprintf(stdout,
+                "warning: there seems to be data needs to be read on conn %d(%s) but auto reading"
+                " is disabled!\n",
+                conn->fd, conn->ip);
+        return true;
     }
 
-    if (done && conn) {
-        __socket_set_del(sock_events, conn->fd);
-
+    err = !socket_read(conn, &buff, DEFAULT_READ_SIZE);
+    if (err) {
         if (parent_socket)
-            rm_connection(parent_socket, conn);
-
-        connection_free(conn);
+            socket_remove(parent_socket, conn);
+        else
+            __socket_set_deinit(sock_events);
         return false;
     }
 
@@ -284,19 +275,18 @@ static void *poll_on_server(void *_socket)
 {
     socket_t *socket = (socket_t *)_socket;
     int n_fds, fd;
-    void *sock_events;
     connection_t *conn;
     socklen_t len = sizeof(struct sockaddr_in);
 
-    sock_events = __socket_set_init(socket->fd);
-    if (!sock_events)
+    socket->events = __socket_set_init(socket->fd);
+    if (!socket->events)
         return NULL;
 
-    __socket_set_add(sock_events, socket->fd);
+    __socket_set_add(socket->events, socket->fd);
     for (;;) {
-        n_fds = __socket_set_poll(sock_events);
+        n_fds = __socket_set_poll(socket->events);
         for (fd = 0; fd < n_fds; ++fd) {
-            int active_fd = __socket_set_get_active_fd(sock_events, fd);
+            int active_fd = __socket_set_get_active_fd(socket->events, fd);
             if (active_fd < 0)
                 continue;
 
@@ -313,18 +303,18 @@ static void *poll_on_server(void *_socket)
                             break;
                         } else {
                             perror("accept");
-                            break;
+                            goto out; 
                         }
                         continue;
                     }
 
                     if (!socket->accept_connections) {
-                        __socket_set_del(sock_events, their_fd);
                         close(their_fd);
                         continue;
                     }
 
                     xmalloc(conn, sizeof(*conn), close(their_fd); goto out);
+                    conn->auto_read = true;
                     conn->fd = their_fd;
 
                     if (!set_nonblock(conn->fd, true)) {
@@ -347,20 +337,19 @@ static void *poll_on_server(void *_socket)
                         socket->conn = conn;
 
                     add_connection(socket, conn);
-                    __socket_set_add(sock_events, their_fd);
+                    __socket_set_add(socket->events, their_fd);
                 }
             } else {
-                list_for_each(&socket->children, conn, node) {
+                list_for_each(&socket->children, conn, node)
                     if (conn->fd == active_fd)
                         break;
-                }
+
                 if (conn)
-                    __poll_on_client(socket, conn, sock_events);
+                    __poll_on_client(socket, conn, socket->events);
             }
         }
     }
 
-    return NULL;
 out:
     socket_free(socket);
     pthread_exit(NULL);
@@ -486,12 +475,24 @@ out:
     return false;
 }
 
+bool socket_remove(socket_t *socket, connection_t *conn)
+{
+    if (unlikely(!socket || !conn))
+        return false;
+
+    __socket_set_del(socket->events, conn->fd);
+    rm_connection(socket, conn);
+    connection_free(conn);
+    return true;
+}
+
 int socket_write(connection_t *conn, const char *fmt, ...)
 {
     char *data;
     int len;
     int err;
     va_list va;
+    struct sk_buff *buff;
 
     if (unlikely(!conn || conn->fd < 0))
         return -EINVAL;
@@ -516,12 +517,49 @@ int socket_write(connection_t *conn, const char *fmt, ...)
         fprintf(stderr,
                 "socket_write(): the data sent may be incomplete!\n");
 
-    if (conn->on_write)
-        conn->on_write(conn, data, len);
+    if (NULL != (buff = malloc(sizeof(*buff)))) {
+        buff->data = data;
+        buff->size = err;
+        if (conn->on_write)
+            (*conn->on_write) (conn, buff);
+        free(buff);
+    }
 
 out:
     free(data);
     return err;
+}
+
+bool socket_read(connection_t *conn, struct sk_buff *buff, size_t size)
+{
+    char *buffer;
+    size_t count;
+
+    if (!conn)
+        return false;
+
+    if (!size)
+        size = DEFAULT_READ_SIZE;
+
+    buffer = calloc(size, sizeof(char));
+    if (!buffer)
+        return false;
+
+    count = read(conn->fd, buffer, size);
+    if (count == -1) {
+        if (ERRNO != E_AGAIN && errno != E_BLOCK)
+            return false;
+    } else if (count == 0)
+        return false;
+
+    buffer[count] = '\0';
+
+    buff->data = buffer;
+    buff->size = count;
+    if (conn && conn->on_read)
+        (*conn->on_read) (conn, buff);
+
+    return true;
 }
 
 void socket_free(socket_t *socket)
@@ -531,8 +569,7 @@ void socket_free(socket_t *socket)
        return;
 
     for (;;) {
-        conn = list_top(&socket->children, connection_t,
-                        node);
+        conn = list_top(&socket->children, connection_t, node);
         if (!conn)
             break;
 

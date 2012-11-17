@@ -34,6 +34,11 @@
 typedef struct socket socket_t;
 typedef struct connection connection_t;
 
+struct sk_buff {
+    char *data;
+    size_t size;
+};
+
 struct socket {
     int fd;
 
@@ -46,6 +51,7 @@ struct socket {
     pthread_mutex_t conn_lock;      /* The connection lock, for adding new connections,
                                        removing dead ones, incrementing number of active connections */
 
+    void *events;                   /* Internal usage  */
     /**
      * on_accept() this callback is called whenever a new connection
      * is accepted.  self is this socket, conn is obviously the 
@@ -56,11 +62,15 @@ struct socket {
     void (*on_accept) (socket_t *self, connection_t *conn);
 };
 
+#define DEFAULT_READ_SIZE 4096   /* This size is set to the buffer on the stack,
+                                    see below.  */
 struct connection {
     int fd;              /* The socket file descriptor */
     char ip[16];         /* The IP of this connection */
     char *remote;        /* Who did we connect to?  Or who did we come from?  */
     time_t last_active;  /* The timestamp of last activity.  Useful for PING PONG. */
+    bool auto_read;      /* If enabled, this connection will be auto read otherwise,
+                            the user must call socket_read() manually.  */
 
     /* Called when we've have connected.  This is the root of the connection.  
      * It should be used to setup other callbacks!  */
@@ -68,9 +78,9 @@ struct connection {
     /* Called when we've disconnected.   */
     void (*on_disconnect) (connection_t *self);
     /* Called when anything is read.  */
-    void (*on_read) (connection_t *self, const char *read, int len);
+    void (*on_read) (connection_t *self, const struct sk_buff *buff);
     /* Called when this connection writes something */
-    void (*on_write) (connection_t *self, const char *written, int len);
+    void (*on_write) (connection_t *self, const struct sk_buff *buff);
 
     struct list_node node;   /* The node */
 };
@@ -112,7 +122,6 @@ extern void connection_free(connection_t *conn);
  */
 extern bool socket_connect(connection_t *conn, const char *addr,
         const char *service);
-
 /**
  * Listen on socket.
  *
@@ -128,8 +137,43 @@ extern bool socket_listen(socket_t *socket, const char *address,
  * @param conn a connection created by socket_connect() or from the listening socket.
  * @param data the data to send
  * @return errno
+ *
+ * Calls conn->on_write if present.
  */
 extern int socket_write(connection_t *conn, const char *fmt, ...);
+
+/**
+ * socket_remove() - close and free a socket connection.
+ *
+ * @param socket, the listening socket.
+ * @param conn, must be a connection of `socket'.
+ *
+ * returns true on success, false otherwise.
+ *
+ * This function calls connection_free() after removal from the
+ * `socket' connections.
+ */
+extern bool socket_remove(socket_t *socket, connection_t *conn);
+
+/**
+ * socket_read() - read from a socket
+ *
+ * @param conn a connected socket
+ * @param sk_buff the buffer that would be allocated with the data read.
+ * @param size how many characters to read?
+ *
+ * on successfull read, this function returns true and does the following:
+ *   * calls conn->on_read if not NULL.
+ *   * sets the data read to `buff'.
+ * on failure, this function returns false.
+ *   if that conn is part of a listening socket (aka a child connection of
+ *   socket_t), consider calling socket_remove() with the listening socket
+ *   as a param.
+ *
+ * This function heap allocates memory for the data read, this means
+ * buff->data must be free'd later on to avoid memory leak issues.
+ */
+extern bool socket_read(connection_t *conn, struct sk_buff *buff, size_t size);
 
 #endif    /* __socket_h */
 

@@ -10,9 +10,14 @@ char *prog;  /* progran name */
  * Callbacks, self-explained
  */
 
-static void on_read(connection_t *s, const char *buffer, int len)
+static void on_read(connection_t *s, const struct sk_buff *buff)
 {
-    printf("[%d]: %s", s->fd, buffer);
+    printf("(read)[%d][%zd]: %s\n", s->fd, buff->size, buff->data);
+}
+
+static void on_write(connection_t *s, const struct sk_buff *buff)
+{
+    printf("(write)[%d][%zd]: %s\n", s->fd, buff->size, buff->data);
 }
 
 static void on_disconnect(connection_t *s)
@@ -22,6 +27,7 @@ static void on_disconnect(connection_t *s)
 
 static void on_connect(connection_t *s)
 {
+    s->on_write = on_write;
     s->on_read = on_read;
     s->on_disconnect = on_disconnect;
 

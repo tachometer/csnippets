@@ -45,11 +45,6 @@ run() {
 
 # http://shawnwilsher.com/archives/184
 _make() {
-    pathpat="(/[^/]*)+:[0-9]+"
-    ccred=$(echo -e "\033[0;31m")
-    ccyellow=$(echo -e "\033[0;33m")
-    ccend=$(echo -e "\033[0m")
-
     $MAKE $1 || exit
 }
 
