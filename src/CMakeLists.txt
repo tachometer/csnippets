@@ -55,7 +55,6 @@ elseif(APPLE)
 endif()
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pthread")
-set(src_LIBRARIES "${src_LIBRARIES} ${CMAKE_THREADS_LIBS_INIT}")
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug" OR CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
     message(STATUS "Debug information: ON")
