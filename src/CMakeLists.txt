@@ -49,13 +49,14 @@ if(WIN32)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mthreads -D__use_select")
     set(src_DEFINITIONS ${src_DEFINITIONS} -D_WIN32_WINNT=0x0501)
     set(CMAKE_C_LINK_FLAGS "${CMAKE_C_LINK_FLAGS} -Wl,--large-address-aware") # strip all debug information
+    set(src_LIBRARIES "-lws2_32")
 elseif(APPLE)
     set(src_DEFINITIONS ${src_DEFINITIONS} -D_REENTRANT) # enable thread safe code
 else()
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pthread")
 endif()
 
-set(src_LIBRARIES ${CMAKE_THREADS_LIBS_INIT})
+set(src_LIBRARIES ${src_LIBRARIES} ${CMAKE_THREADS_LIBS_INIT})
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug" OR CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
     message(STATUS "Debug information: ON")
